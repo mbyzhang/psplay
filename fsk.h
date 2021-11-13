@@ -2,17 +2,17 @@
 #define __FSK_H__
 
 #include <sys/time.h>
-#include <event2/event.h>
-
-#include "cpu_spinner.h"
+#include "simple_tone_gen.h"
 
 typedef struct {
-    cpu_spinner_t* spinner;
-    struct event_base* event_base;
+    simple_tone_gen_t* tone_gen;
+    double f1;
+    double f2;
+    struct timeval symbol_duration;
 } fsk_t;
 
-int fsk_init(fsk_t* fsk, cpu_spinner_t* spinner);
-void fsk_play_tone(fsk_t* fsk, double freq, struct timeval duration);
+int fsk_init(fsk_t* fsk, simple_tone_gen_t* tone_gen, double f1, double f2, struct timeval symbol_duration);
+void fsk_send_symbol(fsk_t* fsk, int symbol);
 void fsk_destroy(fsk_t* fsk);
 
 #endif

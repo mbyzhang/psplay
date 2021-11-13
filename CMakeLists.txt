@@ -11,10 +11,13 @@ pkg_check_modules(EVENT REQUIRED libevent)
 add_library(CPUSpinner cpu_spinner.c)
 target_link_libraries(CPUSpinner PRIVATE Threads::Threads)
 
+add_library(SimpleToneGen simple_tone_gen.c)
+target_link_libraries(SimpleToneGen PRIVATE CPUSpinner ${EVENT_LIBRARIES} m)
+target_link_directories(SimpleToneGen PUBLIC ${EVENT_LIBRARY_DIRS})
+target_include_directories(SimpleToneGen PUBLIC ${EVENT_INCLUDE_DIRS})
+
 add_library(FSKModulator fsk.c)
-target_link_libraries(FSKModulator PRIVATE ${EVENT_LIBRARIES} m)
-target_link_directories(FSKModulator PUBLIC ${EVENT_LIBRARY_DIRS})
-target_include_directories(FSKModulator PUBLIC ${EVENT_INCLUDE_DIRS})
+target_link_libraries(FSKModulator PRIVATE SimpleToneGen)
 
 add_executable(PSPlay psplay.c)
-target_link_libraries(PSPlay PRIVATE Threads::Threads CPUSpinner FSKModulator)
+target_link_libraries(PSPlay PRIVATE Threads::Threads CPUSpinner SimpleToneGen FSKModulator)

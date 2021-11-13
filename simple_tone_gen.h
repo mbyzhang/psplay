@@ -1,0 +1,18 @@
+#ifndef __SIMPLE_TONE_GEN_H__
+#define __SIMPLE_TONE_GEN_H__
+
+#include <sys/time.h>
+#include <event2/event.h>
+
+#include "cpu_spinner.h"
+
+typedef struct {
+    cpu_spinner_t* spinner;
+    struct event_base* event_base;
+} simple_tone_gen_t;
+
+int simple_tone_gen_init(simple_tone_gen_t* simple_tone_gen, cpu_spinner_t* spinner);
+void simple_tone_gen_play(simple_tone_gen_t* simple_tone_gen, double freq, struct timeval duration);
+void simple_tone_gen_destroy(simple_tone_gen_t* simple_tone_gen);
+
+#endif
