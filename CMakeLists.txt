@@ -17,4 +17,4 @@ target_link_directories(FSKModulator PUBLIC ${EVENT_LIBRARY_DIRS})
 target_include_directories(FSKModulator PUBLIC ${EVENT_INCLUDE_DIRS})
 
 add_executable(PSPlay psplay.c)
-target_link_libraries(PSPlay PRIVATE CPUSpinner FSKModulator)
+target_link_libraries(PSPlay PRIVATE Threads::Threads CPUSpinner FSKModulator)
