@@ -20,6 +20,7 @@ int main(int argc, char* argv[]) {
     cpu_spinner_init(&spinner, 0);
     simple_tone_gen_init(&tone_gen, &spinner);
     fsk_init(&fsk, &tone_gen, 3000, 3100, (struct timeval){0, 100000});
+    fsk_start(&fsk);
 
     for (int i = 0; i < 100; i++) {
         fsk_send_symbol(&fsk, i % 2);
