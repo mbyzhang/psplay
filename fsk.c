@@ -17,6 +17,19 @@ void fsk_send_symbol(fsk_t* fsk, int symbol) {
     simple_tone_gen_step(fsk->tone_gen, freq);
 }
 
+void fsk_send_sequence(fsk_t* fsk, uint8_t* data, size_t n_bits) {
+    fsk_start(fsk);
+
+    size_t p = 0;
+
+    for (int i = 0; i < n_bits; i += 8) {
+        uint8_t x = data[p++];
+        for (int j = i; j < n_bits && j < i + 8; j++) {
+            fsk_send_symbol(fsk, x & (1 << (7 - (j - i))));
+        }
+    }
+}
+
 void fsk_destroy(fsk_t* fsk) {
     return;
 }
