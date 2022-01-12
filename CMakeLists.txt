@@ -8,7 +8,7 @@ find_package(Threads REQUIRED)
 
 pkg_check_modules(EVENT REQUIRED libevent)
 
-add_executable(PSPlay psplay.c fsk.c cpu_spinner.c simple_tone_gen.c)
+add_executable(PSPlay psplay.c fsk.c cpu_spinner.c simple_tone_gen.c x8b10b.c)
 target_link_directories(PSPlay PUBLIC ${EVENT_LIBRARY_DIRS})
 target_include_directories(PSPlay PUBLIC ${EVENT_INCLUDE_DIRS})
 target_link_libraries(PSPlay PRIVATE Threads::Threads ${EVENT_LIBRARIES} m )
