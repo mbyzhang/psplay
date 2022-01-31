@@ -10,7 +10,6 @@
 #include "fsk.h"
 #include "simple_tone_gen.h"
 #include "framer.h"
-#include "time_utils.h"
 #include "utils.h"
 
 #define MODE_ALTERNATING_SYMBOLS 0

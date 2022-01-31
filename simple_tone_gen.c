@@ -1,7 +1,7 @@
 #include "simple_tone_gen.h"
 #include <math.h>
 #include <stdio.h>
-#include "time_utils.h"
+#include "utils.h"
 
 #ifndef CLOCK_SOURCE
 #ifdef __CYGWIN__
