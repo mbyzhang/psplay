@@ -3,6 +3,14 @@
 #include <stdio.h>
 #include "time_utils.h"
 
+#ifndef CLOCK_SOURCE
+#ifdef __CYGWIN__
+#define CLOCK_SOURCE CLOCK_MONOTONIC
+#else
+#define CLOCK_SOURCE CLOCK_MONOTONIC_RAW
+#endif
+#endif
+
 int simple_tone_gen_init(simple_tone_gen_t* simple_tone_gen, cpu_spinner_t* spinner) {
     simple_tone_gen->spinner = spinner;
     simple_tone_gen->event_base = event_base_new(); // TODO: error checking
@@ -54,7 +62,7 @@ void simple_tone_gen_play(simple_tone_gen_t* simple_tone_gen, double freq, struc
 }
 
 void simple_tone_gen_start(simple_tone_gen_t* simple_tone_gen, struct timeval step_duration) {
-    clock_gettime(CLOCK_MONOTONIC_RAW, &simple_tone_gen->last_step_time);
+    clock_gettime(CLOCK_SOURCE, &simple_tone_gen->last_step_time);
     simple_tone_gen->step_duration = timeval_to_timespec(step_duration);
 }
 
@@ -62,7 +70,7 @@ void simple_tone_gen_step(simple_tone_gen_t* simple_tone_gen, double freq) {
     timespec_step(&simple_tone_gen->last_step_time, simple_tone_gen->step_duration);
 
     struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC_RAW, &now);
+    clock_gettime(CLOCK_SOURCE, &now);
     timespec_diff(&now, simple_tone_gen->last_step_time);
     simple_tone_gen_play(simple_tone_gen, freq, timespec_to_timeval(now));
 }

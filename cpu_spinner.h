@@ -2,7 +2,6 @@
 #define __CPU_SPINNER_H__
 
 #include <stdint.h>
-#include <ulimit.h>
 #include <pthread.h>
 
 #define CPU_SPINNER_N_CORES_ACTIVE(n) (~(~0ULL << (n)))
