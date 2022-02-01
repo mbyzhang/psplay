@@ -19,6 +19,7 @@ typedef struct {
 int bitstream_init(bitstream_t* stream, size_t cap);
 ssize_t bitstream_write(bitstream_t* stream, void* data, size_t len);
 ssize_t bitstream_write_str(bitstream_t* stream, const char* str);
+ssize_t bitstream_write_n(bitstream_t* stream, uint64_t n, size_t len);
 ssize_t bitstream_read(bitstream_t* stream, void* buf, size_t count);
 size_t bitstream_seek(bitstream_t* stream, size_t pos);
 void bitstream_dump(bitstream_t* stream);

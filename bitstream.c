@@ -73,6 +73,11 @@ fail:
     return bits_written;
 }
 
+ssize_t bitstream_write_n(bitstream_t* stream, uint64_t n, size_t len) {
+    len = MIN(64, len);
+    return bitstream_write(stream, &n, len);
+}
+
 ssize_t bitstream_read(bitstream_t* stream, void* buf, size_t count) {
     ssize_t bits_read = bitwise_copy(stream->data, stream->pos_read, stream->len, buf, 0, count, count);
     if (bits_read < 0) goto fail;

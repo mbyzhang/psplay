@@ -76,6 +76,13 @@ TEST(BitStreamTest, WriteString) {
   ASSERT_EQ(s.data[1], 0b1);
 }
 
+TEST(BitStreamTest, WriteNumber) {
+  bitstream_t s;
+  ASSERT_EQ(bitstream_init(&s, 64), 0);
+  ASSERT_EQ(bitstream_write_n(&s, 0b10110111, 8), 8);
+  ASSERT_EQ(s.data[0], 0b10110111);
+}
+
 TEST(BitStreamTest, ReadOnceSimple) {
   bitstream_t s;
   ASSERT_EQ(bitstream_init(&s, 16), 0);
