@@ -7,6 +7,8 @@
 #include <sys/time.h>
 
 #define GIGA 1000000000L
+#define BIT_ONES(n) ((1U << (n)) - 1U)
+#define MIN(x, y) ((x) < (y) ? (x): (y))
 
 static inline void play_chirp(simple_tone_gen_t* tone_gen, double freq_start, double freq_end, double freq_step, struct timeval step_duration) {
     for (double i = freq_start; i <= freq_end; i += freq_step) {
