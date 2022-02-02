@@ -98,7 +98,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    fsk_init(&fsk, &tone_gen, fsk_f1, fsk_f0, us_to_timeval(1000000ULL / baudrate));
+    double freqs[] = {fsk_f0, fsk_f1};
+    fsk_init(&fsk, &tone_gen, freqs, 1, us_to_timeval(1000000ULL / baudrate));
 
     switch (mode) {
     case MODE_ALTERNATING_SYMBOLS:
