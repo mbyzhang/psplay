@@ -1,4 +1,6 @@
 #include "fsk.h"
+#include <stdbool.h>
+#define BUF_SIZE 1024
 
 int fsk_init(fsk_t* fsk, simple_tone_gen_t* tone_gen, double f1, double f2, struct timeval symbol_duration) {
     fsk->f1 = f1;
@@ -17,17 +19,27 @@ void fsk_send_symbol(fsk_t* fsk, int symbol) {
     simple_tone_gen_step(fsk->tone_gen, freq);
 }
 
-void fsk_send_sequence(fsk_t* fsk, uint8_t* data, size_t n_bits) {
+ssize_t fsk_send_sequence(fsk_t* fsk, bitstream_t* s) {
     fsk_start(fsk);
 
-    size_t p = 0;
+    uint8_t buf[BUF_SIZE];
+    size_t tx_total_bits = 0;
 
-    for (int i = 0; i < n_bits; i += 8) {
-        uint8_t x = data[p++];
-        for (int j = i; j < n_bits && j < i + 8; j++) {
-            fsk_send_symbol(fsk, x & (1 << (7 - (j - i))));
+    while (true) {
+        size_t n_bits = bitstream_read(s, buf, sizeof(buf) * 8);
+        if (n_bits == 0) break;
+        if (n_bits < 0) return n_bits;
+        tx_total_bits += n_bits;
+
+        size_t p = 0;
+        for (int i = 0; i < n_bits; i += 8) {
+            uint8_t x = buf[p++];
+            for (int j = i; j < n_bits && j < i + 8; j++) {
+                fsk_send_symbol(fsk, x & (1 << (j - i)));
+            }
         }
     }
+    return tx_total_bits;
 }
 
 void fsk_destroy(fsk_t* fsk) {

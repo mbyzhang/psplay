@@ -45,7 +45,8 @@ int main(int argc, char* argv[]) {
 
     int mode = MODE_ALTERNATING_SYMBOLS;
     uint8_t buf[BUF_SIZE];
-    int buf_len = 0;
+    int ret;
+    bitstream_t bitstream;
 
     bool loop = false;
     double loop_delay = 0.5;
@@ -63,9 +64,15 @@ int main(int argc, char* argv[]) {
             break;
         case 'm': // message
             mode = MODE_MESSAGE;
-            buf_len = framer_frame((uint8_t*)optarg, strlen(optarg), buf, sizeof(buf));
-            if (buf_len < 0) {
-                fprintf(stderr, "Could not encode message: %s\n", strerror(-buf_len));
+            size_t msg_len = strlen(optarg);
+            int ret = bitstream_init(&bitstream, FRAME_LENGTH_BITS(msg_len));
+            if (ret < 0) {
+                fprintf(stderr, "Could not allocate memory for bitstream\n");
+                exit(EXIT_FAILURE);
+            }
+            ret = framer_frame((uint8_t*)optarg, msg_len, &bitstream);
+            if (ret < 0) {
+                fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
                 exit(EXIT_FAILURE);
             }
             break;
@@ -103,9 +110,10 @@ int main(int argc, char* argv[]) {
         break;
     case MODE_MESSAGE:
         do {
-            fsk_send_sequence(&fsk, buf, buf_len);
+            fsk_send_sequence(&fsk, &bitstream);
             usleep(1000000UL * loop_delay);
         } while (loop);
+        bitstream_destroy(&bitstream);
         break;
     case MODE_CHIRP:
         do {

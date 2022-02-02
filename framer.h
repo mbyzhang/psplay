@@ -3,8 +3,10 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "bitstream.h"
 
-int framer_frame(uint8_t* in, size_t in_len, uint8_t* out, size_t out_len);
-int framer_frame_10b(uint8_t* in, size_t in_len, uint16_t* out, size_t out_len);
+#define FRAME_LENGTH_BITS(payload_len_bytes) (((payload_len_bytes) + 3) * 10)
+
+int framer_frame(uint8_t* in, size_t in_len, bitstream_t* s);
 
 #endif
