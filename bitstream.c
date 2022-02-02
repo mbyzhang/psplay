@@ -101,6 +101,7 @@ void bitstream_dump(bitstream_t* stream) {
 
     for (size_t i = 0; i < stream->len; ++i) {
         printf("%d", 1U & (stream->data[i / 8] >> (i % 8)));
+        if (i % 8 == 7) printf(" ");
     }
 
     printf("\n");
