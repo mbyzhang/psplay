@@ -4,7 +4,7 @@
 
 ### Debian/Ubuntu
 ```
-$ sudo apt install libevent-dev pkg-config cmake build-essential
+$ sudo apt install libevent-dev pkg-config cmake build-essential libgtest-dev
 ```
 
 ### macOS
@@ -12,7 +12,7 @@ $ sudo apt install libevent-dev pkg-config cmake build-essential
 Make sure you have Homebrew and Xcode Command Line Tools installed.
 
 ```
-$ brew install libevent pkg-config cmake
+$ brew install libevent pkg-config cmake googletest
 ```
 
 ## Building
