@@ -20,6 +20,11 @@ add_library(PSPlayLib fsk.c cpu_spinner.c simple_tone_gen.c x8b10b.c framer.c bi
 target_include_directories(PSPlayLib PUBLIC ${EVENT_INCLUDE_DIRS} ${CORRECT_INCLUDE_DIRS})
 target_link_directories(PSPlayLib PUBLIC ${EVENT_LIBRARY_DIRS})
 target_link_libraries(PSPlayLib Threads::Threads ${EVENT_LIBRARIES} m ${CORRECT_LIBRARIES})
+target_compile_options(PSPlayLib PUBLIC -march=native)
+
+if (DEFINED CPU_SPINNER_KERNEL)
+target_compile_options(PSPlayLib PUBLIC -DCPU_SPINNER_KERNEL=${CPU_SPINNER_KERNEL})
+endif()
 
 add_executable(PSPlay psplay.c)
 target_link_libraries(PSPlay PSPlayLib)
