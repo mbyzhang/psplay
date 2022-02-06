@@ -15,6 +15,7 @@
 #define MODE_MESSAGE 1
 #define MODE_CHIRP 2
 #define BUF_SIZE 1024
+#define MAX_FREQ_SIZE 128
 
 #define PARSE_CLI_DOUBLE(var) do { \
     char *endptr;                  \
@@ -33,8 +34,8 @@ int main(int argc, char* argv[]) {
     cpu_spinner_init(&spinner, 0);
     simple_tone_gen_init(&tone_gen, &spinner);
 
-    double fsk_f1 = 3000.0;
-    double fsk_f0 = 3200.0;
+    double freqs[MAX_FREQ_SIZE];
+    size_t n_freqs = 0;
 
     int mode = MODE_ALTERNATING_SYMBOLS;
     uint8_t buf[BUF_SIZE];
@@ -47,14 +48,26 @@ int main(int argc, char* argv[]) {
     double baudrate = 100.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, ":0:1:m:lacb:d:")) != -1) {
+    while ((opt = getopt(argc, argv, ":f:m:lacb:d:")) != -1) {
         switch (opt) {
-        case '0': // f0/f1
-            PARSE_CLI_DOUBLE(fsk_f0);
+        case 'f': { // frequencies
+            char* pch;
+            pch = strtok(optarg, ",");
+            while (pch != NULL && n_freqs < MAX_FREQ_SIZE) {
+                char* endptr;
+                freqs[n_freqs++] = strtod(pch, &endptr);
+                if (pch == endptr) {
+                    fprintf(stderr, "Invalid frequency: %s\n", pch);
+                    exit(EXIT_FAILURE);
+                }
+                pch = strtok(NULL, ",");
+            }
+            if (!IS_POT(n_freqs) || n_freqs < 2) {
+                fprintf(stderr, "Number of frequencies must be at least two and a power of two\n");
+                exit(EXIT_FAILURE);
+            }
             break;
-        case '1':
-            PARSE_CLI_DOUBLE(fsk_f1);
-            break;
+        }
         case 'm': // message
             mode = MODE_MESSAGE;
             size_t msg_len = strlen(optarg);
@@ -85,21 +98,27 @@ int main(int argc, char* argv[]) {
             mode = MODE_CHIRP;
             break;
         default:
-            fprintf(stderr, "usage: %s [-acl] [-m message] [-0 fsk_f0] [-1 fsk_f1] [-b baudrate] [-d loop_delay]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-acl] [-m message] [-f f0,f1,...] [-b baudrate] [-d loop_delay]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
     }
 
-    double freqs[] = {fsk_f0, fsk_f1};
-    fsk_init(&fsk, &tone_gen, freqs, 1, us_to_timeval(1000000ULL / baudrate));
+    if (n_freqs == 0) {
+        n_freqs = 2;
+        freqs[0] = 3200.0;
+        freqs[1] = 3000.0;
+    }
+
+    fsk_init(&fsk, &tone_gen, freqs, log2_int(n_freqs), us_to_timeval(1000000ULL / baudrate));
 
     switch (mode) {
     case MODE_ALTERNATING_SYMBOLS:
         fsk_start(&fsk);
         while (true) {
-            fsk_send_symbol(&fsk, 0);
-            fsk_send_symbol(&fsk, 1);
+            for (size_t i = 0; i < n_freqs; i++) {
+                fsk_send_symbol(&fsk, i);
+            }
         }
         break;
     case MODE_MESSAGE:
