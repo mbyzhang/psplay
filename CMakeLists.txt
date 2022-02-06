@@ -33,6 +33,6 @@ enable_testing()
 add_executable(PSPlayTests tests/bitstream.cc)
 
 target_include_directories(PSPlayTests PUBLIC ${GTEST_INCLUDE_DIRS})
-target_link_libraries(PSPlayTests ${GTEST_MAIN_LIBRARIES})
+target_link_libraries(PSPlayTests ${GTEST_BOTH_LIBRARIES})
 target_link_libraries(PSPlayTests PSPlayLib)
 gtest_discover_tests(PSPlayTests)
