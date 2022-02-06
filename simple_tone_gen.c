@@ -1,6 +1,7 @@
 #include "simple_tone_gen.h"
 #include <math.h>
 #include <stdio.h>
+#include <pthread.h>
 #include "utils.h"
 
 #ifndef CLOCK_SOURCE
@@ -14,6 +15,13 @@
 int simple_tone_gen_init(simple_tone_gen_t* simple_tone_gen, cpu_spinner_t* spinner) {
     simple_tone_gen->spinner = spinner;
     simple_tone_gen->event_base = event_base_new(); // TODO: error checking
+
+    const int policy = SCHED_RR;
+    struct sched_param param = {
+        .sched_priority = sched_get_priority_max(policy)
+    };
+    pthread_setschedparam(pthread_self(), policy, &param);
+
     return 0;
 }
 
