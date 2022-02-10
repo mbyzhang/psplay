@@ -25,6 +25,10 @@ size_t bitstream_seek(bitstream_t* stream, size_t pos);
 void bitstream_dump(bitstream_t* stream);
 void bitstream_destroy(bitstream_t* stream);
 
+static inline size_t bitstream_remaining_cap(bitstream_t* stream) {
+    return stream->cap - stream->pos_write;
+}
+
 #ifdef __cplusplus
 }
 #endif 
