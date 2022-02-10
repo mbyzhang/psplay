@@ -30,9 +30,11 @@ int main(int argc, char* argv[]) {
     cpu_spinner_t spinner;
     fsk_t fsk;
     simple_tone_gen_t tone_gen;
+    framer_t framer;
 
     cpu_spinner_init(&spinner, 0);
     simple_tone_gen_init(&tone_gen, &spinner);
+    framer_init(&framer, 0.2);
 
     double freqs[MAX_FREQ_SIZE];
     size_t n_freqs = 0;
@@ -71,16 +73,17 @@ int main(int argc, char* argv[]) {
         case 'm': // message
             mode = MODE_MESSAGE;
             size_t msg_len = strlen(optarg);
-            int ret = bitstream_init(&bitstream, FRAME_LENGTH_BITS(msg_len));
+            int ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
             if (ret < 0) {
                 fprintf(stderr, "Could not allocate memory for bitstream\n");
                 exit(EXIT_FAILURE);
             }
-            ret = framer_frame((uint8_t*)optarg, msg_len, &bitstream);
+            ret = framer_frame(&framer, (uint8_t*)optarg, msg_len, &bitstream);
             if (ret < 0) {
                 fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
                 exit(EXIT_FAILURE);
             }
+            bitstream_dump(&bitstream);
             break;
         case 'l': // loop
             loop = true;
@@ -135,6 +138,7 @@ int main(int argc, char* argv[]) {
         break;
     }
 
+    framer_destory(&framer);
     fsk_destroy(&fsk);
     simple_tone_gen_destroy(&tone_gen);
     cpu_spinner_destroy(&spinner);

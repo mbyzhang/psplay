@@ -4,10 +4,15 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <assert.h>
+#include <correct.h>
+#include <math.h>
 #include "utils.h"
 
 #define FRAME_SFD 0x3c
-#define FRAME_EFD 0x1c
+#define FRAME_MAX_PAYLOAD_SIZE 128
+
+#define BUF_SIZE 256
+#define FRAME_HEADER_RS_PARITY_LEN 2
 
 static inline uint16_t rev10b(uint16_t in) {
     const uint16_t lut[] = {
@@ -20,31 +25,67 @@ static inline uint16_t rev10b(uint16_t in) {
     return (lut[in & BIT_ONES(5)] << 5) | (lut[in >> 5]);
 }
 
-#define FRAMER_X8B10B_WRITE(stream, data, rd, ret, ctrl, fail) do { \
-    uint16_t t;                                         \
-    x8b10b_enc(data, &t, ctrl, &rd);                       \
-    t = rev10b(t);                                      \
-    ret = bitstream_write(stream, &t, 10);              \
-    if (ret < 0) goto fail;                             \
-} while (0);
+static inline ssize_t bitstream_write_8b10b(bitstream_t* s, uint8_t data, int* rd, int ctrl) {
+    uint16_t t;
+    x8b10b_enc(data, &t, ctrl, rd);
+    t = rev10b(t);
+    return bitstream_write(s, &t, 10);
+}
 
-int framer_frame(uint8_t* in, size_t in_len, bitstream_t* s) {
-    int ret;
+static inline ssize_t bitstream_write_8b10b_chunk(bitstream_t* s, uint8_t* data, size_t len, int* rd) {
+    if (bitstream_remaining_cap(s) < len * 10) return -E2BIG;
+    ssize_t bits_written = 0;
+    for (int i = 0; i < len; ++i) {
+        ssize_t ret = bitstream_write_8b10b(s, data[i], rd, false);
+        if (ret < 0) return ret;
+        bits_written += ret;
+    }
+    return bits_written;
+}
+
+int framer_init(framer_t* framer, double payload_parity_len_ratio) {
+    framer->payload_parity_len_ratio = payload_parity_len_ratio;
+    framer->rs_header = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 1, 1, FRAME_HEADER_RS_PARITY_LEN);
+    if (framer->rs_header == NULL) return -1;
+    return 0;
+}
+
+int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
+    int ret = 0;
     int rd = -1;
 
-    if (s->cap < (in_len + 3) * 10) return -E2BIG;
+    uint8_t header[] = { in_len };
+    uint8_t header_encoded[sizeof(header) + FRAME_HEADER_RS_PARITY_LEN];
+    uint8_t payload_encoded[BUF_SIZE];
 
-    ret = bitstream_write_n(s, 0b1010101010, 10);
-    if (ret < 0) goto fail;
+    size_t payload_parity_len = ceil(framer->payload_parity_len_ratio * in_len);
+    size_t len = in_len + 2 + sizeof(header_encoded) + payload_parity_len;
 
-    FRAMER_X8B10B_WRITE(s, FRAME_SFD, rd, ret, true, fail);
+    if (in_len > FRAME_MAX_PAYLOAD_SIZE) return -EMSGSIZE;
+    if (bitstream_remaining_cap(s) < len) return -E2BIG;
 
-    for (int i = 0; i < in_len; ++i) {
-        FRAMER_X8B10B_WRITE(s, in[i], rd, ret, false, fail);
-    }
+    correct_reed_solomon* rs_payload = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 1, 1, payload_parity_len);
 
-    FRAMER_X8B10B_WRITE(s, FRAME_EFD, rd, ret, true, fail);
+    // premable
+    CHECK_ERROR(bitstream_write_n(s, 0b1010101010, 10));
+
+    // start-of-frame delimiter
+    CHECK_ERROR(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
+
+    // header
+    CHECK_ERROR(correct_reed_solomon_encode(framer->rs_header, header, sizeof(header), header_encoded));
+    CHECK_ERROR(bitstream_write_8b10b_chunk(s, header_encoded, sizeof(header_encoded), &rd));
     
+    // payload
+    CHECK_ERROR(correct_reed_solomon_encode(rs_payload, in, in_len, payload_encoded));
+    CHECK_ERROR(bitstream_write_8b10b_chunk(s, payload_encoded, in_len + payload_parity_len, &rd));
+
+    ret = len;
 fail:
+    correct_reed_solomon_destroy(rs_payload);
     return ret;
+}
+
+void framer_destory(framer_t* framer) {
+    correct_reed_solomon_destroy(framer->rs_header);
 }
