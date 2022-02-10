@@ -14,6 +14,10 @@
 #define BUF_SIZE 256
 #define FRAME_HEADER_RS_PARITY_LEN 2
 
+#define FRAMER_RS_PRIM correct_rs_primitive_polynomial_8_4_3_2_0
+#define FRAMER_RS_FCR  1
+#define FRAMER_RS_GRG  1
+
 static inline uint16_t rev10b(uint16_t in) {
     const uint16_t lut[] = {
         0b00000, 0b10000, 0b01000, 0b11000, 0b00100, 0b10100, 0b01100, 0b11100,
@@ -45,7 +49,7 @@ static inline ssize_t bitstream_write_8b10b_chunk(bitstream_t* s, uint8_t* data,
 
 int framer_init(framer_t* framer, double payload_parity_len_ratio) {
     framer->payload_parity_len_ratio = payload_parity_len_ratio;
-    framer->rs_header = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 1, 1, FRAME_HEADER_RS_PARITY_LEN);
+    framer->rs_header = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, FRAME_HEADER_RS_PARITY_LEN);
     if (framer->rs_header == NULL) return -1;
     return 0;
 }
@@ -64,7 +68,7 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
     if (in_len > FRAME_MAX_PAYLOAD_SIZE) return -EMSGSIZE;
     if (bitstream_remaining_cap(s) < len) return -E2BIG;
 
-    correct_reed_solomon* rs_payload = correct_reed_solomon_create(correct_rs_primitive_polynomial_8_4_3_2_0, 1, 1, payload_parity_len);
+    correct_reed_solomon* rs_payload = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, payload_parity_len);
 
     // premable
     CHECK_ERROR(bitstream_write_n(s, 0b1010101010, 10));
