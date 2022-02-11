@@ -24,7 +24,7 @@
 
 #define BIT(N)  (1<<(N))
 #define MASK(N) ((1<<(N))-1)
-#define RD_BIT  BIT(7)
+#define RD_BIT  BIT(6)
 
 #define _TRACE
 
@@ -59,10 +59,10 @@ int x8b10b_enc(uint8_t u8b, uint16_t *p10b, int ctrl, int *rd)
 
 	if (y == 7 && !ctrl) {
 		if ((*rd) < 0) {
-			if ((x == 17) || (x == 18) || (x = 20))
+			if ((x == 17) || (x == 18) || (x == 20))
 					y = 8;
 		} else {
-			if ((x == 11) || (x == 13) || (x = 14))
+			if ((x == 11) || (x == 13) || (x == 14))
 					y = 8;
 		}
 	}
