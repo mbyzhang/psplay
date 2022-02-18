@@ -16,10 +16,13 @@ pkg_check_modules(EVENT REQUIRED libevent)
 find_library(CORRECT_LIBRARIES NAMES correct REQUIRED)
 find_path(CORRECT_INCLUDE_DIRS NAMES correct.h REQUIRED)
 
-add_library(PSPlayLib fsk.c cpu_spinner.c simple_tone_gen.c x8b10b.c framer.c bitstream.c)
-target_include_directories(PSPlayLib PUBLIC ${EVENT_INCLUDE_DIRS} ${CORRECT_INCLUDE_DIRS})
+find_library(LIBSNDFILE_LIBRARIES NAMES sndfile REQUIRED)
+find_path(LIBSNDFILE_INCLUDE_DIRS NAMES sndfile.h REQUIRED)
+
+add_library(PSPlayLib fsk.c cpu_spinner.c simple_tone_gen.c x8b10b.c framer.c bitstream.c ping_pong_buf.c bitbang_player.c)
+target_include_directories(PSPlayLib PUBLIC ${EVENT_INCLUDE_DIRS} ${CORRECT_INCLUDE_DIRS} ${LIBSNDFILE_INCLUDE_DIRS})
 target_link_directories(PSPlayLib PUBLIC ${EVENT_LIBRARY_DIRS})
-target_link_libraries(PSPlayLib Threads::Threads ${EVENT_LIBRARIES} m ${CORRECT_LIBRARIES})
+target_link_libraries(PSPlayLib Threads::Threads ${EVENT_LIBRARIES} m ${CORRECT_LIBRARIES} ${LIBSNDFILE_LIBRARIES})
 target_compile_options(PSPlayLib PUBLIC -march=native)
 
 if (DEFINED CPU_SPINNER_KERNEL)

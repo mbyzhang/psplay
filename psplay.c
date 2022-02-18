@@ -5,15 +5,20 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
+#include <sndfile.h>
+
 #include "cpu_spinner.h"
 #include "fsk.h"
 #include "simple_tone_gen.h"
 #include "framer.h"
 #include "utils.h"
+#include "ping_pong_buf.h"
+#include "bitbang_player.h"
 
 #define MODE_ALTERNATING_SYMBOLS 0
 #define MODE_MESSAGE 1
 #define MODE_CHIRP 2
+#define MODE_AUDIOFILE 3
 #define BUF_SIZE 1024
 #define MAX_FREQ_SIZE 128
 
@@ -31,6 +36,8 @@ int main(int argc, char* argv[]) {
     fsk_t fsk;
     simple_tone_gen_t tone_gen;
     framer_t framer;
+    ppbuf_t ppbuf;
+    bitbang_player_t bbplayer;
 
     cpu_spinner_init(&spinner, 0);
     simple_tone_gen_init(&tone_gen, &spinner);
@@ -49,8 +56,15 @@ int main(int argc, char* argv[]) {
 
     double baudrate = 100.0;
 
+    SNDFILE* sndfile;
+    SF_INFO sndfile_info = {
+        .format = 0
+    };
+    const int block_size = 4096;
+    double audio_gain = 1.0;
+
     int opt;
-    while ((opt = getopt(argc, argv, ":f:m:lacb:d:")) != -1) {
+    while ((opt = getopt(argc, argv, ":f:m:lacb:d:i:g:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -91,6 +105,24 @@ int main(int argc, char* argv[]) {
         case 'a': // alternating symbols
             mode = MODE_ALTERNATING_SYMBOLS;
             break;
+        case 'i': // audio file
+            mode = MODE_AUDIOFILE;
+            sndfile = sf_open(optarg, SFM_READ, &sndfile_info);
+
+            if (sf_error(sndfile)) {
+                fprintf(stderr, "Could not open audio file: %s\n", sf_strerror(sndfile));
+                exit(EXIT_FAILURE);
+            }
+
+            if (sndfile_info.channels != 1) {
+                fprintf(stderr, "Could not open audio file: only mono audio is supported\n");
+                exit(EXIT_FAILURE);
+            }
+
+            break;
+        case 'g': // audio gain
+            PARSE_CLI_DOUBLE(audio_gain);
+            break;
         case 'b': // baudrate
             PARSE_CLI_DOUBLE(baudrate);
             break;
@@ -101,7 +133,7 @@ int main(int argc, char* argv[]) {
             mode = MODE_CHIRP;
             break;
         default:
-            fprintf(stderr, "usage: %s [-acl] [-m message] [-f f0,f1,...] [-b baudrate] [-d loop_delay]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-acl] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
@@ -135,6 +167,26 @@ int main(int argc, char* argv[]) {
         do {
             play_chirp(&tone_gen, 1000.0, 20000.0, 10.0, (struct timeval){0, 20000});
         } while (loop);
+        break;
+    case MODE_AUDIOFILE:
+        ppbuf_init(&ppbuf, block_size * sizeof(double));
+        bitbang_player_init(&bbplayer, &spinner, sndfile_info.samplerate, audio_gain);
+
+        do {
+            sf_seek(sndfile, 0, SF_SEEK_SET);
+            bitbang_player_play(&bbplayer, &ppbuf);
+
+            while (sf_read_double(sndfile, ppbuf_buf_write_begin(&ppbuf), block_size) != 0) {
+                ppbuf_buf_write_done(&ppbuf);
+            }
+
+            bitbang_player_stop(&bbplayer);
+            usleep(1000000UL * loop_delay);
+        } while (loop);
+
+        ppbuf_destroy(&ppbuf);
+        bitbang_player_destroy(&bbplayer);
+        sf_close(sndfile);
         break;
     }
 
