@@ -11,6 +11,7 @@
 #define MIN(x, y) ((x) < (y) ? (x): (y))
 #define IS_POT(x) ((x != 0) && ((x & (x - 1)) == 0))
 #define CHECK_ERROR(expr) if ((ret = (expr)) < 0) goto fail
+#define CHECK_ERROR_NZ(expr) if ((ret = (expr)) != 0) goto fail
 
 static inline unsigned int log2_int(unsigned int x) {
   unsigned int y = 0;
