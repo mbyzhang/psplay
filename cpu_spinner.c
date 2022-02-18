@@ -207,4 +207,7 @@ void cpu_spinner_destroy(cpu_spinner_t* spinner) {
     }
     free(spinner->worker_args);
     free(spinner->worker_threads);
+
+    pthread_mutex_destroy(&spinner->mutex);
+    pthread_cond_destroy(&spinner->cond);
 }
