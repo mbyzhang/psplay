@@ -79,7 +79,7 @@ bool ppbuf_read_available(ppbuf_t* ppbuf) {
 }
 
 bool ppbuf_write_available(ppbuf_t* ppbuf) {
-    return get_state(ppbuf, ppbuf->buf_writei) == PPBUF_STATE_ACTIVE;
+    return get_state(ppbuf, ppbuf->buf_writei) == PPBUF_STATE_FREE;
 }
 
 void ppbuf_destroy(ppbuf_t* ppbuf) {
