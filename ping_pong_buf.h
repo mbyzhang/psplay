@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define PPBUF_STATE_FREE     0
 #define PPBUF_STATE_ACTIVE   1
 
@@ -31,5 +35,9 @@ bool ppbuf_read_available(ppbuf_t* ppbuf);
 bool ppbuf_write_available(ppbuf_t* ppbuf);
 
 void ppbuf_destroy(ppbuf_t* ppbuf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

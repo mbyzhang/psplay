@@ -33,7 +33,7 @@ add_executable(PSPlay psplay.c)
 target_link_libraries(PSPlay PSPlayLib)
 
 enable_testing()
-add_executable(PSPlayTests tests/bitstream.cc)
+add_executable(PSPlayTests tests/bitstream.cc tests/ping_pong_buf.cc)
 
 target_include_directories(PSPlayTests PUBLIC ${GTEST_INCLUDE_DIRS})
 target_link_libraries(PSPlayTests ${GTEST_BOTH_LIBRARIES})
