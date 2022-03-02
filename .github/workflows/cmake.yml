@@ -20,6 +20,18 @@ jobs:
     steps:
     - uses: actions/checkout@v2
 
+    - name: Install deps
+      run: sudo apt install libevent-dev pkg-config cmake build-essential libgtest-dev libsndfile1-dev
+
+    - name: Install libcorrect
+      run: |
+        git clone git@github.com:quiet/libcorrect.git
+        cd libcorrect
+        cmake -B build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+        cmake --build build --config ${{env.BUILD_TYPE}}
+        sudo make install
+        cd ..
+
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
