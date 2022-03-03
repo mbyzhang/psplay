@@ -39,10 +39,6 @@ int main(int argc, char* argv[]) {
     ppbuf_t ppbuf;
     bitbang_player_t bbplayer;
 
-    cpu_spinner_init(&spinner, 0);
-    simple_tone_gen_init(&tone_gen, &spinner);
-    framer_init(&framer, 0.2);
-
     double freqs[MAX_FREQ_SIZE];
     size_t n_freqs = 0;
 
@@ -50,6 +46,8 @@ int main(int argc, char* argv[]) {
     uint8_t buf[BUF_SIZE];
     int ret;
     bitstream_t bitstream;
+    framer_format_t framer_format = FRAMER_FORMAT_STANDARD;
+    char* message = NULL;
 
     bool loop = false;
     double loop_delay = 0.5;
@@ -64,7 +62,7 @@ int main(int argc, char* argv[]) {
     double audio_gain = 1.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, ":f:m:lacb:d:i:g:")) != -1) {
+    while ((opt = getopt(argc, argv, ":f:m:lacrb:d:i:g:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -86,18 +84,7 @@ int main(int argc, char* argv[]) {
         }
         case 'm': // message
             mode = MODE_MESSAGE;
-            size_t msg_len = strlen(optarg);
-            int ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
-            if (ret < 0) {
-                fprintf(stderr, "Could not allocate memory for bitstream\n");
-                exit(EXIT_FAILURE);
-            }
-            ret = framer_frame(&framer, (uint8_t*)optarg, msg_len, &bitstream);
-            if (ret < 0) {
-                fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
-                exit(EXIT_FAILURE);
-            }
-            bitstream_dump(&bitstream);
+            message = optarg;
             break;
         case 'l': // loop
             loop = true;
@@ -132,8 +119,11 @@ int main(int argc, char* argv[]) {
         case 'c': // chrip
             mode = MODE_CHIRP;
             break;
+        case 'r': // raw-payload frame
+            framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
+            break;
         default:
-            fprintf(stderr, "usage: %s [-acl] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-aclr] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
@@ -145,6 +135,9 @@ int main(int argc, char* argv[]) {
         freqs[1] = 3000.0;
     }
 
+    cpu_spinner_init(&spinner, 0);
+    simple_tone_gen_init(&tone_gen, &spinner);
+    framer_init(&framer, 0.2, framer_format);
     fsk_init(&fsk, &tone_gen, freqs, log2_int(n_freqs), us_to_timeval(1000000ULL / baudrate));
 
     switch (mode) {
@@ -157,6 +150,17 @@ int main(int argc, char* argv[]) {
         }
         break;
     case MODE_MESSAGE:
+        ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
+        if (ret < 0) {
+            fprintf(stderr, "Could not allocate memory for bitstream\n");
+            exit(EXIT_FAILURE);
+        }
+        ret = framer_frame(&framer, (uint8_t*)message, strlen(message), &bitstream);
+        if (ret < 0) {
+            fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
+            exit(EXIT_FAILURE);
+        }
+        bitstream_dump(&bitstream);
         do {
             fsk_send_sequence(&fsk, &bitstream);
             usleep(1000000UL * loop_delay);
