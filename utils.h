@@ -20,8 +20,9 @@ static inline unsigned int log2_int(unsigned int x) {
 }
 
 static inline void play_chirp(simple_tone_gen_t* tone_gen, double freq_start, double freq_end, double freq_step, struct timeval step_duration) {
+    simple_tone_gen_start(tone_gen, step_duration);
     for (double i = freq_start; i <= freq_end; i += freq_step) {
-        simple_tone_gen_play(tone_gen, i, step_duration);
+        simple_tone_gen_step(tone_gen, i);
     }
 }
 
