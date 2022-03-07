@@ -58,6 +58,7 @@ void simple_tone_gen_play(simple_tone_gen_t* simple_tone_gen, double freq, struc
 
     half_period = to_timeval((uint64_t)round(0.5 / freq * 1e6));
     toggler_args.simple_tone_gen = simple_tone_gen;
+    toggler_args.status = 0;
     toggler_args.toggler_ev = event_new(simple_tone_gen->event_base, -1, EV_PERSIST, toggler_cb_func, &toggler_args);
 
     event_add(toggler_args.toggler_ev, &half_period);
