@@ -194,8 +194,8 @@ int main(int argc, char* argv[]) {
         break;
     }
 
-    framer_destory(&framer);
     fsk_destroy(&fsk);
+    framer_destory(&framer);
     simple_tone_gen_destroy(&tone_gen);
     cpu_spinner_destroy(&spinner);
     return 0;
