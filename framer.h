@@ -20,7 +20,7 @@ typedef struct {
 } framer_t;
 
 int framer_init(framer_t* framer, double payload_parity_ratio, framer_format_t format);
-int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s);
+int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, int n_ary);
 void framer_destory(framer_t* framer);
 
 #endif
