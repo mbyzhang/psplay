@@ -5,6 +5,8 @@
 #include <time.h>
 #include <stdint.h>
 #include <sys/time.h>
+#include <stdlib.h>
+#include <pthread.h>
 
 #define GIGA 1000000000L
 #define BIT_ONES(n) ((1U << (n)) - 1U)
@@ -12,6 +14,16 @@
 #define IS_POT(x) ((x != 0) && ((x & (x - 1)) == 0))
 #define CHECK_ERROR(expr) if ((ret = (expr)) < 0) goto fail
 #define CHECK_ERROR_NZ(expr) if ((ret = (expr)) != 0) goto fail
+#define ASSERT_SUCCESS_Z(expr) if ((expr) == 0) abort();
+#define ASSERT_SUCCESS_NZ(expr) if ((expr) != 0) abort();
+
+static inline void thread_set_priority_to_max() {
+    const int policy = SCHED_RR;
+    struct sched_param param = {
+        .sched_priority = sched_get_priority_max(policy)
+    };
+    ASSERT_SUCCESS_NZ(pthread_setschedparam(pthread_self(), policy, &param));
+}
 
 static inline unsigned int log2_int(unsigned int x) {
   unsigned int y = 0;

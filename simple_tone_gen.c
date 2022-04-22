@@ -16,11 +16,7 @@ int simple_tone_gen_init(simple_tone_gen_t* simple_tone_gen, cpu_spinner_t* spin
     simple_tone_gen->spinner = spinner;
     simple_tone_gen->event_base = event_base_new(); // TODO: error checking
 
-    const int policy = SCHED_RR;
-    struct sched_param param = {
-        .sched_priority = sched_get_priority_max(policy)
-    };
-    pthread_setschedparam(pthread_self(), policy, &param);
+    thread_set_priority_to_max();
 
     return 0;
 }
