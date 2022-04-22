@@ -9,6 +9,7 @@
 
 #include "cpu_spinner.h"
 #include "fsk.h"
+#include "dbpsk.h"
 #include "simple_tone_gen.h"
 #include "framer.h"
 #include "utils.h"
@@ -34,6 +35,7 @@
 int main(int argc, char* argv[]) {
     cpu_spinner_t spinner;
     fsk_t fsk;
+    dbpsk_t dbpsk;
     simple_tone_gen_t tone_gen;
     framer_t framer;
     ppbuf_t ppbuf;
@@ -50,6 +52,7 @@ int main(int argc, char* argv[]) {
     char* message = NULL;
 
     bool loop = false;
+    bool use_dbpsk = false;
     double loop_delay = 0.5;
 
     double baudrate = 100.0;
@@ -62,7 +65,7 @@ int main(int argc, char* argv[]) {
     double audio_gain = 1.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, ":f:m:lacrb:d:i:g:")) != -1) {
+    while ((opt = getopt(argc, argv, "lacrpm:b:d:i:g:f:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -75,10 +78,6 @@ int main(int argc, char* argv[]) {
                     exit(EXIT_FAILURE);
                 }
                 pch = strtok(NULL, ",");
-            }
-            if (!IS_POT(n_freqs) || n_freqs < 2) {
-                fprintf(stderr, "Number of frequencies must be at least two and a power of two\n");
-                exit(EXIT_FAILURE);
             }
             break;
         }
@@ -107,6 +106,9 @@ int main(int argc, char* argv[]) {
             }
 
             break;
+        case 'p': // use DBPSK
+            use_dbpsk = true;
+            break;
         case 'g': // audio gain
             PARSE_CLI_DOUBLE(audio_gain);
             break;
@@ -123,33 +125,65 @@ int main(int argc, char* argv[]) {
             framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
             break;
         default:
-            fprintf(stderr, "usage: %s [-aclr] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-aclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
     }
 
     if (n_freqs == 0) {
-        n_freqs = 2;
-        freqs[0] = 3200.0;
-        freqs[1] = 3000.0;
+        if (use_dbpsk) {
+            n_freqs = 1;
+            freqs[0] = 3000.0;
+        }
+        else {
+            n_freqs = 2;
+            freqs[0] = 3000.0;
+            freqs[1] = 3200.0;
+        }
     }
 
     cpu_spinner_init(&spinner, 0);
-    simple_tone_gen_init(&tone_gen, &spinner);
-    framer_init(&framer, 0.2, framer_format);
-    fsk_init(&fsk, &tone_gen, freqs, log2_int(n_freqs), us_to_timeval(1000000ULL / baudrate));
+
+    if (mode == MODE_ALTERNATING_SYMBOLS || mode == MODE_MESSAGE) {
+        if (use_dbpsk) {
+            if (n_freqs != 1) {
+                fprintf(stderr, "DBPSK only supports one carrier frequency\n");
+                exit(EXIT_FAILURE);
+            }
+            dbpsk_init(&dbpsk, &spinner, freqs[0], us_to_timeval(1000000ULL / baudrate));
+        }
+        else {
+            if (!IS_POT(n_freqs) || n_freqs < 2) {
+                fprintf(stderr, "Number of frequencies must be at least two and a power of two\n");
+                exit(EXIT_FAILURE);
+            }
+            simple_tone_gen_init(&tone_gen, &spinner);
+            fsk_init(&fsk, &tone_gen, freqs, log2_int(n_freqs), us_to_timeval(1000000ULL / baudrate));
+        }
+    }
 
     switch (mode) {
     case MODE_ALTERNATING_SYMBOLS:
-        fsk_start(&fsk);
-        while (true) {
-            for (size_t i = 0; i < n_freqs; i++) {
-                fsk_send_symbol(&fsk, i);
+        if (use_dbpsk) {
+            dbpsk_start(&dbpsk);
+            while (true) {
+                dbpsk_send_symbol(&dbpsk, 0);
+                dbpsk_send_symbol(&dbpsk, 1);
+            }
+            dbpsk_stop(&dbpsk);
+        }
+        else {
+            fsk_start(&fsk);
+            while (true) {
+                for (size_t i = 0; i < n_freqs; i++) {
+                    fsk_send_symbol(&fsk, i);
+                }
             }
         }
         break;
     case MODE_MESSAGE:
+        framer_init(&framer, 0.2, framer_format);
         ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
         if (ret < 0) {
             fprintf(stderr, "Could not allocate memory for bitstream\n");
@@ -162,10 +196,16 @@ int main(int argc, char* argv[]) {
         }
         bitstream_dump(&bitstream);
         do {
-            fsk_send_sequence(&fsk, &bitstream);
+            if (use_dbpsk) {
+                dbpsk_send_sequence(&dbpsk, &bitstream);
+            }
+            else {
+                fsk_send_sequence(&fsk, &bitstream);
+            }
             usleep(1000000UL * loop_delay);
         } while (loop);
         bitstream_destroy(&bitstream);
+        framer_destory(&framer);
         break;
     case MODE_CHIRP:
         do {
@@ -194,9 +234,16 @@ int main(int argc, char* argv[]) {
         break;
     }
 
-    fsk_destroy(&fsk);
-    framer_destory(&framer);
-    simple_tone_gen_destroy(&tone_gen);
+    if (mode == MODE_ALTERNATING_SYMBOLS || mode == MODE_MESSAGE) {
+        if (use_dbpsk) {
+            dbpsk_destroy(&dbpsk);
+        }
+        else {
+            fsk_destroy(&fsk);
+            simple_tone_gen_destroy(&tone_gen);
+        }
+    }
+
     cpu_spinner_destroy(&spinner);
     return 0;
 }
