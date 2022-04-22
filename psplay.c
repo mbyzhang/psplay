@@ -143,6 +143,8 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    int m_exp = log2_int(n_freqs);
+
     cpu_spinner_init(&spinner, 0);
 
     if (mode == MODE_ALTERNATING_SYMBOLS || mode == MODE_MESSAGE) {
@@ -159,7 +161,7 @@ int main(int argc, char* argv[]) {
                 exit(EXIT_FAILURE);
             }
             simple_tone_gen_init(&tone_gen, &spinner);
-            fsk_init(&fsk, &tone_gen, freqs, log2_int(n_freqs), us_to_timeval(1000000ULL / baudrate));
+            fsk_init(&fsk, &tone_gen, freqs, m_exp, us_to_timeval(1000000ULL / baudrate));
         }
     }
 
@@ -189,7 +191,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "Could not allocate memory for bitstream\n");
             exit(EXIT_FAILURE);
         }
-        ret = framer_frame(&framer, (uint8_t*)message, strlen(message), &bitstream);
+        ret = framer_frame(&framer, (uint8_t*)message, strlen(message), &bitstream, m_exp);
         if (ret < 0) {
             fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
             exit(EXIT_FAILURE);

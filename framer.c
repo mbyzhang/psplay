@@ -12,6 +12,8 @@
 #define FRAME_MAX_PAYLOAD_SIZE 128
 
 #define BUF_SIZE 256
+
+#define FRAME_PREAMBLE_N 5
 #define FRAME_HEADER_RS_PARITY_LEN 2
 
 #define FRAMER_RS_PRIM correct_rs_primitive_polynomial_8_4_3_2_0
@@ -55,7 +57,7 @@ int framer_init(framer_t* framer, double payload_parity_len_ratio, framer_format
     return 0;
 }
 
-int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
+int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, int m_exp) {
     int ret = 0;
     int rd = -1;
 
@@ -71,7 +73,9 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
 
 
     // premable
-    CHECK_ERROR(bitstream_write_n(s, 0b1010101010, 10));
+    for (int i = 0; i < FRAME_PREAMBLE_N; i++) {
+        CHECK_ERROR(bitstream_write_n(s, 1, m_exp * 2));
+    }
 
     // start-of-frame delimiter
     CHECK_ERROR(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
