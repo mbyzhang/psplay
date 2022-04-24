@@ -9,7 +9,9 @@
 #include <stdbool.h>
 #include <pthread.h>
 
+#define MEGA 1000000L
 #define GIGA 1000000000L
+
 #define BIT_ONES(n) ((1U << (n)) - 1U)
 #define MIN(x, y) ((x) < (y) ? (x): (y))
 #define IS_POT(x) ((x != 0) && ((x & (x - 1)) == 0))
@@ -69,7 +71,27 @@ static inline void timespec_step(struct timespec* a, struct timespec b) {
 }
 
 static inline struct timeval us_to_timeval(uint64_t us) {
-    return (struct timeval){ us / 1000000L, us % 1000000UL };
+    return (struct timeval){ us / MEGA, us % MEGA };
+}
+
+static inline struct timespec ns_to_timespec(uint64_t ns) {
+    return (struct timespec){ ns / GIGA, ns % GIGA };
+}
+
+static inline struct timespec hz_to_period_timespec(double hz) {
+    return ns_to_timespec(GIGA / hz);
+}
+
+static inline int timespec_cmp(struct timespec a, struct timespec b) {
+    if (a.tv_sec > b.tv_sec || (a.tv_sec == b.tv_sec && a.tv_nsec > b.tv_nsec)) {
+        return 1;
+    }
+    else if (a.tv_sec == b.tv_sec && a.tv_nsec == b.tv_nsec) {
+        return 0;
+    }
+    else {
+        return -1;
+    }
 }
 
 static inline struct timeval timespec_to_timeval(struct timespec a) {
