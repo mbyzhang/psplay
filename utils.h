@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <pthread.h>
 
 #define GIGA 1000000000L
@@ -18,11 +19,16 @@
 #define ASSERT_SUCCESS_NZ(expr) if ((expr) != 0) abort();
 
 static inline void thread_set_priority_to_max() {
+    static bool warning_shown = false;
     const int policy = SCHED_RR;
     struct sched_param param = {
         .sched_priority = sched_get_priority_max(policy)
     };
-    ASSERT_SUCCESS_NZ(pthread_setschedparam(pthread_self(), policy, &param));
+    int ret = pthread_setschedparam(pthread_self(), policy, &param);
+    if (ret != 0 && !warning_shown) {
+        perror("Failed to set thread priority, performance may be affected");
+        warning_shown = true;
+    }
 }
 
 static inline unsigned int log2_int(unsigned int x) {
