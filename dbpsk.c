@@ -31,7 +31,7 @@ int dbpsk_init(dbpsk_t* dbpsk, cpu_spinner_t* spinner, double carrier_freq, stru
     dbpsk->symbol_duration_ts = timeval_to_timespec(symbol_duration);
     dbpsk->half_period_tv = us_to_timeval(round(0.5 / dbpsk->carrier_freq * 1e6));
 
-    ASSERT_SUCCESS_NZ(pthread_mutex_init(&dbpsk->status_mutex, NULL));
+    CHECK_ERROR_NE0(pthread_mutex_init(&dbpsk->status_mutex, NULL));
 
     thread_set_priority_to_max();
 
@@ -43,8 +43,8 @@ int dbpsk_start(dbpsk_t* dbpsk) {
     event_add(dbpsk->ev_freq_gen, &dbpsk->half_period_tv);
     clock_gettime(CLOCK_MONOTONIC_RAW, &dbpsk->last_symbol_time_ts);
 
-    ASSERT_SUCCESS_Z(dbpsk->ev_freq_gen);
-    ASSERT_SUCCESS_NZ(pthread_create(&dbpsk->worker, NULL, &worker, dbpsk));
+    CHECK_ERROR_PTR(dbpsk->ev_freq_gen);
+    CHECK_ERROR_NE0(pthread_create(&dbpsk->worker, NULL, &worker, dbpsk));
 
     return 0;
 }
@@ -69,7 +69,7 @@ int dbpsk_send_symbol(dbpsk_t* dbpsk, unsigned int symbol) {
 
 int dbpsk_stop(dbpsk_t* dbpsk) {
     event_del(dbpsk->ev_freq_gen);
-    ASSERT_SUCCESS_NZ(pthread_join(dbpsk->worker, NULL));
+    CHECK_ERROR_NE0(pthread_join(dbpsk->worker, NULL));
     return 0;
 }
 

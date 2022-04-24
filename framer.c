@@ -74,31 +74,30 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, i
 
     // premable
     for (int i = 0; i < FRAME_PREAMBLE_N; i++) {
-        CHECK_ERROR(bitstream_write_n(s, 1, m_exp * 2));
+        CHECK_ERROR_LT0(bitstream_write_n(s, 1, m_exp * 2));
     }
 
     // start-of-frame delimiter
-    CHECK_ERROR(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
+    CHECK_ERROR_LT0(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
 
     // header
-    CHECK_ERROR(correct_reed_solomon_encode(framer->rs_header, header, sizeof(header), header_encoded));
-    CHECK_ERROR(bitstream_write_8b10b_chunk(s, header_encoded, sizeof(header_encoded), &rd));
+    CHECK_ERROR_LT0(correct_reed_solomon_encode(framer->rs_header, header, sizeof(header), header_encoded));
+    CHECK_ERROR_LT0(bitstream_write_8b10b_chunk(s, header_encoded, sizeof(header_encoded), &rd));
     
     // payload
     correct_reed_solomon* rs_payload = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, payload_parity_len);
 
     switch (framer->format) {
     case FRAMER_FORMAT_STANDARD:
-        CHECK_ERROR(correct_reed_solomon_encode(rs_payload, in, in_len, payload_encoded));
-        CHECK_ERROR(bitstream_write_8b10b_chunk(s, payload_encoded, in_len + payload_parity_len, &rd));
+        CHECK_ERROR_LT0(correct_reed_solomon_encode(rs_payload, in, in_len, payload_encoded));
+        CHECK_ERROR_LT0(bitstream_write_8b10b_chunk(s, payload_encoded, in_len + payload_parity_len, &rd));
         break;
     case FRAMER_FORMAT_RAW_PAYLOAD:
-        CHECK_ERROR(bitstream_write(s, in, in_len * 8));
+        CHECK_ERROR_LT0(bitstream_write(s, in, in_len * 8));
         break;
     }
 
     ret = len;
-fail:
     correct_reed_solomon_destroy(rs_payload);
     return ret;
 }

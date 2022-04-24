@@ -15,10 +15,11 @@
 #define BIT_ONES(n) ((1U << (n)) - 1U)
 #define MIN(x, y) ((x) < (y) ? (x): (y))
 #define IS_POT(x) ((x != 0) && ((x & (x - 1)) == 0))
-#define CHECK_ERROR(expr) if ((ret = (expr)) < 0) goto fail
-#define CHECK_ERROR_NZ(expr) if ((ret = (expr)) != 0) goto fail
-#define ASSERT_SUCCESS_Z(expr) if ((expr) == 0) abort();
-#define ASSERT_SUCCESS_NZ(expr) if ((expr) != 0) abort();
+
+#define CHECK_ERROR_PTR(expr) if ((expr) == NULL) { perror(__FUNCTION__); abort(); }
+#define CHECK_ERROR_LT0(expr) if ((expr) < 0) { perror(__FUNCTION__); abort(); }
+#define CHECK_ERROR_NE0(expr) if ((expr) != 0) { perror(__FUNCTION__); abort(); }
+#define CHECK_ERROR_EQN1(expr) if ((expr) == -1) { perror(__FUNCTION__); abort(); }
 
 static inline void thread_set_priority_to_max() {
     static bool warning_shown = false;

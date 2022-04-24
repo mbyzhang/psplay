@@ -25,8 +25,8 @@ int ppbuf_init(ppbuf_t* ppbuf, size_t buf_size) {
     ppbuf->buf_writei = 0;
     ppbuf->size = buf_size;
 
-    CHECK_ERROR_NZ(pthread_mutex_init(&ppbuf->mutex, NULL));
-    CHECK_ERROR_NZ(pthread_cond_init(&ppbuf->cond, NULL));
+    CHECK_ERROR_NE0(pthread_mutex_init(&ppbuf->mutex, NULL));
+    CHECK_ERROR_NE0(pthread_cond_init(&ppbuf->cond, NULL));
 
 fail:
     return ret;
