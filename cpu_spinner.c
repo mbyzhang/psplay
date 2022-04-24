@@ -1,9 +1,14 @@
+#ifdef __linux__
+#define _GNU_SOURCE
+#endif
+
 #include "cpu_spinner.h"
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include "cpu_kernels.h"
+#include "utils.h"
 
 void* worker(void* raw_arg) {
     cpu_spinner_worker_args_t* args = (cpu_spinner_worker_args_t*)raw_arg;
@@ -72,6 +77,13 @@ int cpu_spinner_init(cpu_spinner_t* spinner, int num_cores) {
         if (pthread_create(&spinner->worker_threads[i], NULL, &worker, args)) {
             goto pthread_create_fail;
         }
+
+#ifdef _GNU_SOURCE
+        cpu_set_t cpuset;
+        CPU_ZERO(&cpuset);
+        CPU_SET(i, &cpuset);
+        CHECK_ERROR_NE0(pthread_setaffinity_np(spinner->worker_threads[i], sizeof(cpuset), &cpuset));
+#endif
     }
     return 0;
 
