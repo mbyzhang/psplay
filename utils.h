@@ -21,6 +21,14 @@
 #define CHECK_ERROR_NE0(expr) if ((expr) != 0) { perror(__FUNCTION__); abort(); }
 #define CHECK_ERROR_EQN1(expr) if ((expr) == -1) { perror(__FUNCTION__); abort(); }
 
+#ifndef CLOCK_SOURCE
+#ifdef __CYGWIN__
+#define CLOCK_SOURCE CLOCK_MONOTONIC
+#else
+#define CLOCK_SOURCE CLOCK_MONOTONIC_RAW
+#endif
+#endif
+
 static inline void thread_set_priority_to_max() {
     static bool warning_shown = false;
     const int policy = SCHED_RR;
