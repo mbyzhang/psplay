@@ -15,6 +15,7 @@
 #include "utils.h"
 #include "ping_pong_buf.h"
 #include "bitbang_player.h"
+#include "quirks.h"
 
 #define MODE_ALTERNATING_SYMBOLS 0
 #define MODE_MESSAGE 1
@@ -144,6 +145,10 @@ int main(int argc, char* argv[]) {
     }
 
     int m_exp = log2_int(n_freqs);
+
+#ifdef __linux__
+    linux_cpufreq_governor_set_to_performance();
+#endif
 
     cpu_spinner_init(&spinner, 0);
 
