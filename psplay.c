@@ -164,6 +164,9 @@ int main(int argc, char* argv[]) {
             fsk_init(&fsk, &tone_gen, freqs, m_exp, us_to_timeval(1000000ULL / baudrate));
         }
     }
+    else if (mode == MODE_CHIRP) {
+        simple_tone_gen_init(&tone_gen, &spinner);
+    }
 
     switch (mode) {
     case MODE_ALTERNATING_SYMBOLS:
@@ -244,6 +247,9 @@ int main(int argc, char* argv[]) {
             fsk_destroy(&fsk);
             simple_tone_gen_destroy(&tone_gen);
         }
+    }
+    else if (mode == MODE_CHIRP) {
+        simple_tone_gen_destroy(&tone_gen);
     }
 
     cpu_spinner_destroy(&spinner);
