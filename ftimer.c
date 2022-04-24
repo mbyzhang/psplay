@@ -1,7 +1,10 @@
 #include "ftimer.h"
 #include "utils.h"
 
+#ifdef __linux__
 #include <sys/timerfd.h>
+#endif
+
 #include <sys/time.h>
 #include <stdbool.h>
 #include <stdint.h>

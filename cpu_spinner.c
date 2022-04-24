@@ -78,7 +78,7 @@ int cpu_spinner_init(cpu_spinner_t* spinner, int num_cores) {
             goto pthread_create_fail;
         }
 
-#ifdef _GNU_SOURCE
+#ifdef __linux__
         cpu_set_t cpuset;
         CPU_ZERO(&cpuset);
         CPU_SET(i, &cpuset);
