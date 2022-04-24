@@ -24,9 +24,9 @@ void simple_tone_gen_play(simple_tone_gen_t* simple_tone_gen, double freq, struc
     ftimer_destroy(&ftimer);
 }
 
-void simple_tone_gen_start(simple_tone_gen_t* simple_tone_gen, struct timeval step_duration) {
+void simple_tone_gen_start(simple_tone_gen_t* simple_tone_gen, struct timespec step_duration) {
     clock_gettime(CLOCK_SOURCE, &simple_tone_gen->last_step_time);
-    simple_tone_gen->step_duration = timeval_to_timespec(step_duration);
+    simple_tone_gen->step_duration = step_duration;
 }
 
 void simple_tone_gen_step(simple_tone_gen_t* simple_tone_gen, double freq) {

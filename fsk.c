@@ -3,7 +3,7 @@
 
 #include "utils.h"
 
-int fsk_init(fsk_t* fsk, simple_tone_gen_t* tone_gen, const double* freqs, int m_exp, struct timeval symbol_duration) {
+int fsk_init(fsk_t* fsk, simple_tone_gen_t* tone_gen, const double* freqs, int m_exp, struct timespec symbol_duration) {
     fsk->freqs = freqs;
     fsk->m_exp = m_exp;
     fsk->tone_gen = tone_gen;

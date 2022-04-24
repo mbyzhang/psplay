@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
                 exit(EXIT_FAILURE);
             }
             simple_tone_gen_init(&tone_gen, &spinner);
-            fsk_init(&fsk, &tone_gen, freqs, m_exp, us_to_timeval(1000000ULL / baudrate));
+            fsk_init(&fsk, &tone_gen, freqs, m_exp, hz_to_period_timespec(baudrate));
         }
     }
     else if (mode == MODE_CHIRP) {
@@ -219,7 +219,7 @@ int main(int argc, char* argv[]) {
         break;
     case MODE_CHIRP:
         do {
-            play_chirp(&tone_gen, 1000.0, 20000.0, 10.0, (struct timeval){0, 20000});
+            play_chirp(&tone_gen, 1000.0, 20000.0, 10.0, (struct timespec){0, 20000000L});
         } while (loop);
         break;
     case MODE_AUDIOFILE:
