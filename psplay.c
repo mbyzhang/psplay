@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "DBPSK only supports one carrier frequency\n");
                 exit(EXIT_FAILURE);
             }
-            dbpsk_init(&dbpsk, &spinner, freqs[0], us_to_timeval(1000000ULL / baudrate));
+            dbpsk_init(&dbpsk, freqs[0], hz_to_period_timespec(baudrate), (void(*)(int, void*))modulator_cb, &spinner);
         }
         else {
             if (!IS_POT(n_freqs) || n_freqs < 2) {
