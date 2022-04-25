@@ -33,6 +33,10 @@
     }                              \
 } while (0);
 
+void modulator_cb(int status, cpu_spinner_t* spinner) {
+    cpu_spinner_spin(spinner, (status)? CPU_SPINNER_ALL_CORES_ACTIVE : CPU_SPINNER_ALL_CORES_IDLE);
+}
+
 int main(int argc, char* argv[]) {
     cpu_spinner_t spinner;
     fsk_t fsk;
@@ -165,8 +169,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Number of frequencies must be at least two and a power of two\n");
                 exit(EXIT_FAILURE);
             }
-            simple_tone_gen_init(&tone_gen, &spinner);
-            fsk_init(&fsk, &tone_gen, freqs, m_exp, hz_to_period_timespec(baudrate));
+            fsk_init(&fsk, freqs, m_exp, hz_to_period_timespec(baudrate), (void(*)(int, void*))modulator_cb, &spinner);
         }
     }
     else if (mode == MODE_CHIRP) {
@@ -190,6 +193,7 @@ int main(int argc, char* argv[]) {
                     fsk_send_symbol(&fsk, i);
                 }
             }
+            fsk_stop(&fsk);
         }
         break;
     case MODE_MESSAGE:
@@ -250,7 +254,6 @@ int main(int argc, char* argv[]) {
         }
         else {
             fsk_destroy(&fsk);
-            simple_tone_gen_destroy(&tone_gen);
         }
     }
     else if (mode == MODE_CHIRP) {

@@ -3,21 +3,28 @@
 
 #include "utils.h"
 
-int fsk_init(fsk_t* fsk, simple_tone_gen_t* tone_gen, const double* freqs, int m_exp, struct timespec symbol_duration) {
+int fsk_init(fsk_t* fsk, const double* freqs, int m_exp, struct timespec symbol_duration, void (*cb)(int, void *), void *cb_args) {
     fsk->freqs = freqs;
     fsk->m_exp = m_exp;
-    fsk->tone_gen = tone_gen;
     fsk->symbol_duration = symbol_duration;
+    fsk->cb = cb;
+    fsk->cb_args = cb_args;
     return 0;
 }
 
 void fsk_start(fsk_t* fsk) {
-    simple_tone_gen_start(fsk->tone_gen, fsk->symbol_duration);
+    multi_tone_gen_init(&fsk->tone_gen, fsk->freqs, 1 << fsk->m_exp, 0, fsk->cb, fsk->cb_args);
+    ftimer_create(&fsk->symbol_timer, FTIMER_RUN_RT | FTIMER_RUN_ASYNC | FTIMER_COMPENSATE_MISSES, fsk->symbol_duration, NULL, NULL);
 }
 
 void fsk_send_symbol(fsk_t* fsk, unsigned int symbol) {
-    double freq = fsk->freqs[symbol];
-    simple_tone_gen_step(fsk->tone_gen, freq);
+    multi_tone_gen_switch_frequency(&fsk->tone_gen, symbol);
+    ftimer_wait(&fsk->symbol_timer);
+}
+
+void fsk_stop(fsk_t* fsk) {
+    ftimer_destroy(&fsk->symbol_timer);
+    multi_tone_gen_destroy(&fsk->tone_gen);
 }
 
 ssize_t fsk_send_sequence(fsk_t* fsk, bitstream_t* s) {
@@ -33,6 +40,8 @@ ssize_t fsk_send_sequence(fsk_t* fsk, bitstream_t* s) {
         tx_total_bits += n_bits;
         fsk_send_symbol(fsk, symbol);
     }
+
+    fsk_stop(fsk);
 
     return tx_total_bits;
 }
