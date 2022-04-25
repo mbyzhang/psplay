@@ -23,6 +23,7 @@ void ftimer_create(ftimer_t *ftimer, int flags, struct timespec interval, void (
     CHECK_ERROR_NE0(pthread_cond_init(&ftimer->control_cond, NULL));
     CHECK_ERROR_NE0(pthread_mutex_init(&ftimer->paused_mutex, NULL));
     CHECK_ERROR_NE0(pthread_cond_init(&ftimer->paused_cond, NULL));
+    CHECK_ERROR_NE0(sem_init(&ftimer->sem, 0, 0));
 
 #ifdef __linux__
     struct itimerspec value = {
@@ -79,16 +80,11 @@ void ftimer_run(ftimer_t *ftimer)
         ssize_t s = read(ftimer->timerfd, &exp, sizeof(uint64_t));
         CHECK_ERROR_NE0(s - sizeof(uint64_t));
 
-        if (ftimer->flags & FTIMER_COMPENSATE_MISSES)
+        for (uint64_t i = 0; i < exp; ++i)
         {
-            for (uint64_t i = 0; i < exp; ++i)
-            {
-                ftimer->cb(ftimer->cb_args);
-            }
-        }
-        else
-        {
-            ftimer->cb(ftimer->cb_args);
+            if (ftimer->cb != NULL) ftimer->cb(ftimer->cb_args);
+            CHECK_ERROR_NE0(sem_post(&ftimer->sem));
+            if (ftimer->flags & FTIMER_COMPENSATE_MISSES) break;
         }
 #else
         timespec_step(&ftimer->last_tick, ftimer->interval);
@@ -96,13 +92,17 @@ void ftimer_run(ftimer_t *ftimer)
         clock_gettime(CLOCK_SOURCE, &now);
         timespec_diff(&now, ftimer->last_tick);
 
-        if (timespec_cmp(now, (struct timespec){0, 0}) <= 0) {
-            // printf("Can't keep up\n");
+        if (!(ftimer->flags & FTIMER_COMPENSATE_MISSES))
+        {
+            while (timespec_cmp(now, (struct timespec){0, 0}) <= 0) {
+                timespec_step(&ftimer->last_tick, ftimer->interval);
+                timespec_diff(&now, ftimer->last_tick);
+            }
         }
-        else {
-            nanosleep(&now, NULL);
-            ftimer->cb(ftimer->cb_args);
-        }
+
+        nanosleep(&now, NULL);
+        if (ftimer->cb != NULL) ftimer->cb(ftimer->cb_args);
+        CHECK_ERROR_NE0(sem_post(&ftimer->sem));
 #endif
     }
 }
@@ -132,6 +132,10 @@ void ftimer_unpause(ftimer_t *ftimer)
     pthread_mutex_unlock(&ftimer->control_mutex);
 }
 
+void ftimer_wait(ftimer_t* ftimer) {
+    sem_wait(&ftimer->sem);
+}
+
 void ftimer_exit(ftimer_t *ftimer)
 {
     pthread_mutex_lock(&ftimer->control_mutex);
@@ -151,7 +155,7 @@ void ftimer_destroy(ftimer_t *ftimer)
 #ifdef __linux__
     close(ftimer->timerfd);
 #endif
-
+    sem_destroy(&ftimer->sem);
     pthread_cond_destroy(&ftimer->paused_cond);
     pthread_mutex_destroy(&ftimer->paused_mutex);
     pthread_cond_destroy(&ftimer->control_cond);
