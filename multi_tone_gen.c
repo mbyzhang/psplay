@@ -17,6 +17,7 @@ void multi_tone_gen_init(multi_tone_gen_t* tone_gen, const double* freqs, int n_
     tone_gen->n_freqs = n_freqs;
     tone_gen->cb = cb;
     tone_gen->cb_args = cb_args;
+    tone_gen->status = 0;
 
     CHECK_ERROR_NE0(pthread_mutex_init(&tone_gen->status_mutex, NULL));
 
