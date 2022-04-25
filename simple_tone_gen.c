@@ -19,7 +19,7 @@ static void toggler_cb_func(simple_tone_gen_t* tone_gen) {
 
 void simple_tone_gen_play(simple_tone_gen_t* simple_tone_gen, double freq, struct timespec duration_ts) {
     ftimer_t ftimer;
-    ftimer_create(&ftimer, FTIMER_RUN_ASYNC | FTIMER_RUN_RT, hz_to_period_timespec(freq * 2.0), (void*)(simple_tone_gen_t*)toggler_cb_func, simple_tone_gen);
+    ftimer_create(&ftimer, FTIMER_RUN_ASYNC | FTIMER_RUN_RT, hz_to_period_timespec(freq * 2.0), (void(*)(void*))toggler_cb_func, simple_tone_gen);
     nanosleep(&duration_ts, NULL);
     ftimer_destroy(&ftimer);
 }
