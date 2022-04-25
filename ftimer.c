@@ -55,13 +55,13 @@ void ftimer_run(ftimer_t *ftimer)
         pthread_mutex_lock(&ftimer->control_mutex);
         if (ftimer->pausing)
         {
+            pthread_mutex_lock(&ftimer->paused_mutex);
+            ftimer->paused = true;
+            pthread_cond_broadcast(&ftimer->paused_cond);
+            pthread_mutex_unlock(&ftimer->paused_mutex);
+
             while (ftimer->pausing)
             {
-                pthread_mutex_lock(&ftimer->paused_mutex);
-                ftimer->paused = true;
-                pthread_cond_broadcast(&ftimer->paused_cond);
-                pthread_mutex_unlock(&ftimer->paused_mutex);
-
                 pthread_cond_wait(&ftimer->control_cond, &ftimer->control_mutex);
             }
             pthread_mutex_lock(&ftimer->paused_mutex);
@@ -121,7 +121,7 @@ void ftimer_pause(ftimer_t *ftimer, bool wait_for_paused)
     {
         pthread_cond_wait(&ftimer->paused_cond, &ftimer->paused_mutex);
     }
-    pthread_mutex_lock(&ftimer->paused_mutex);
+    pthread_mutex_unlock(&ftimer->paused_mutex);
 }
 
 void ftimer_unpause(ftimer_t *ftimer)
