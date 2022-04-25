@@ -138,6 +138,8 @@ void ftimer_wait(ftimer_t* ftimer) {
 
 void ftimer_exit(ftimer_t *ftimer)
 {
+    ftimer_unpause(ftimer);
+
     pthread_mutex_lock(&ftimer->control_mutex);
     ftimer->exiting = true;
     pthread_mutex_unlock(&ftimer->control_mutex);
