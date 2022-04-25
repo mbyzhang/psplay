@@ -42,6 +42,10 @@ void multi_tone_gen_switch_frequency(multi_tone_gen_t* tone_gen, int freq_idx) {
     if (freq_idx != -1) {
         ftimer_unpause(&tone_gen->timers[freq_idx]);
     }
+    else {
+        // shut down spinner when the tone generator is inactive
+        tone_gen->cb(0, tone_gen->cb_args);
+    }
 }
 
 void multi_tone_gen_switch_phase(multi_tone_gen_t* tone_gen) {
@@ -49,6 +53,8 @@ void multi_tone_gen_switch_phase(multi_tone_gen_t* tone_gen) {
 }
 
 void multi_tone_gen_destroy(multi_tone_gen_t* tone_gen) {
+    multi_tone_gen_switch_frequency(tone_gen, -1);
+
     for (int i = 0; i < tone_gen->n_freqs; ++i) {
         ftimer_destroy(&tone_gen->timers[i]);
     }
