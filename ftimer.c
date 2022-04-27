@@ -18,12 +18,14 @@ void ftimer_create(ftimer_t *ftimer, int flags, struct timespec interval, void (
     ftimer->pausing = flags & FTIMER_START_PAUSED;
     ftimer->paused = false;
     ftimer->exiting = false;
+    ftimer->outstanding_ticks = 0;
 
     CHECK_ERROR_NE0(pthread_mutex_init(&ftimer->control_mutex, NULL));
     CHECK_ERROR_NE0(pthread_cond_init(&ftimer->control_cond, NULL));
     CHECK_ERROR_NE0(pthread_mutex_init(&ftimer->paused_mutex, NULL));
     CHECK_ERROR_NE0(pthread_cond_init(&ftimer->paused_cond, NULL));
-    CHECK_ERROR_NE0(sem_init(&ftimer->sem, 0, 0));
+    CHECK_ERROR_NE0(pthread_mutex_init(&ftimer->outstanding_ticks_mutex, NULL));
+    CHECK_ERROR_NE0(pthread_cond_init(&ftimer->outstanding_ticks_cond, NULL));
 
 #ifdef __linux__
     struct itimerspec value = {
@@ -83,7 +85,10 @@ void ftimer_run(ftimer_t *ftimer)
         for (uint64_t i = 0; i < exp; ++i)
         {
             if (ftimer->cb != NULL) ftimer->cb(ftimer->cb_args);
-            CHECK_ERROR_NE0(sem_post(&ftimer->sem));
+            pthread_mutex_lock(&ftimer->outstanding_ticks_mutex);
+            ftimer->outstanding_ticks++;
+            pthread_cond_signal(&ftimer->outstanding_ticks_cond);
+            pthread_mutex_unlock(&ftimer->outstanding_ticks_mutex);
             if (ftimer->flags & FTIMER_COMPENSATE_MISSES) break;
         }
 #else
@@ -104,7 +109,11 @@ void ftimer_run(ftimer_t *ftimer)
 
         nanosleep(&diff, NULL);
         if (ftimer->cb != NULL) ftimer->cb(ftimer->cb_args);
-        CHECK_ERROR_NE0(sem_post(&ftimer->sem));
+
+        pthread_mutex_lock(&ftimer->outstanding_ticks_mutex);
+        ftimer->outstanding_ticks++;
+        pthread_cond_signal(&ftimer->outstanding_ticks_cond);
+        pthread_mutex_unlock(&ftimer->outstanding_ticks_mutex);
 #endif
     }
 }
@@ -135,7 +144,12 @@ void ftimer_unpause(ftimer_t *ftimer)
 }
 
 void ftimer_wait(ftimer_t* ftimer) {
-    sem_wait(&ftimer->sem);
+    pthread_mutex_lock(&ftimer->outstanding_ticks_mutex);
+    while (ftimer->outstanding_ticks <= 0) {
+        pthread_cond_wait(&ftimer->outstanding_ticks_cond, &ftimer->outstanding_ticks_mutex);
+    }
+    ftimer->outstanding_ticks--;
+    pthread_mutex_unlock(&ftimer->outstanding_ticks_mutex);
 }
 
 void ftimer_exit(ftimer_t *ftimer)
@@ -159,7 +173,8 @@ void ftimer_destroy(ftimer_t *ftimer)
 #ifdef __linux__
     close(ftimer->timerfd);
 #endif
-    sem_destroy(&ftimer->sem);
+    pthread_cond_destroy(&ftimer->outstanding_ticks_cond);
+    pthread_mutex_destroy(&ftimer->outstanding_ticks_mutex);
     pthread_cond_destroy(&ftimer->paused_cond);
     pthread_mutex_destroy(&ftimer->paused_mutex);
     pthread_cond_destroy(&ftimer->control_cond);

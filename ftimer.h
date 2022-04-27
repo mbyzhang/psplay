@@ -4,7 +4,6 @@
 #include <sys/time.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include <semaphore.h>
 
 typedef struct {
 
@@ -25,7 +24,9 @@ typedef struct {
     pthread_cond_t control_cond;
     bool exiting;
     pthread_t worker_thread;
-    sem_t sem;
+    int outstanding_ticks;
+    pthread_mutex_t outstanding_ticks_mutex;
+    pthread_cond_t outstanding_ticks_cond;
 } ftimer_t;
 
 #define FTIMER_START_PAUSED         1
