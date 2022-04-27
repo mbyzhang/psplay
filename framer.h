@@ -6,7 +6,8 @@
 #include <correct.h>
 #include "bitstream.h"
 
-#define FRAME_MAX_LENGTH_BITS (256 * 8)
+#define FRAME_MAX_LENGTH_BITS 2620
+#define FRAME_MAX_PAYLOAD_SIZE 255
 
 typedef enum {
     FRAMER_FORMAT_STANDARD = 0,

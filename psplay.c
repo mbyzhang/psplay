@@ -21,7 +21,7 @@
 #define MODE_MESSAGE 1
 #define MODE_CHIRP 2
 #define MODE_AUDIOFILE 3
-#define BUF_SIZE 1024
+
 #define MAX_FREQ_SIZE 128
 
 #define PARSE_CLI_DOUBLE(var) do { \
@@ -50,11 +50,12 @@ int main(int argc, char* argv[]) {
     size_t n_freqs = 0;
 
     int mode = MODE_ALTERNATING_SYMBOLS;
-    uint8_t buf[BUF_SIZE];
     int ret;
     bitstream_t bitstream;
     framer_format_t framer_format = FRAMER_FORMAT_STANDARD;
-    char* message = NULL;
+    uint8_t* message = malloc(FRAME_MAX_PAYLOAD_SIZE);
+    CHECK_ERROR_PTR(message);
+    size_t message_len = 0;
 
     bool loop = false;
     bool use_dbpsk = false;
@@ -70,7 +71,7 @@ int main(int argc, char* argv[]) {
     double audio_gain = 1.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, "lacrpm:b:d:i:g:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "slacrpm:b:d:i:g:f:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -86,9 +87,33 @@ int main(int argc, char* argv[]) {
             }
             break;
         }
+        case 's': // read message from stdin
+            mode = MODE_MESSAGE;
+            while (FRAME_MAX_PAYLOAD_SIZE - message_len > 0) {
+                int bytes_read = read(STDIN_FILENO, message + message_len, FRAME_MAX_PAYLOAD_SIZE - message_len);
+
+                if (bytes_read == 0) {
+                    break;
+                }
+                else if (bytes_read < 0) {
+                    perror("read");
+                    abort();
+                }
+
+                message_len += bytes_read;
+            }
+            break;
         case 'm': // message
             mode = MODE_MESSAGE;
-            message = optarg;
+            message_len = strlen(optarg);
+            if (message_len > FRAME_MAX_PAYLOAD_SIZE) {
+                fprintf(stderr, "Input message too long\n");
+                exit(EXIT_FAILURE);
+            }
+            else {
+                memcpy(message, optarg, message_len);
+            }
+ 
             break;
         case 'l': // loop
             loop = true;
@@ -130,7 +155,7 @@ int main(int argc, char* argv[]) {
             framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
             break;
         default:
-            fprintf(stderr, "usage: %s [-aclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-saclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
@@ -203,7 +228,7 @@ int main(int argc, char* argv[]) {
             fprintf(stderr, "Could not allocate memory for bitstream\n");
             exit(EXIT_FAILURE);
         }
-        ret = framer_frame(&framer, (uint8_t*)message, strlen(message), &bitstream, m_exp);
+        ret = framer_frame(&framer, message, message_len, &bitstream, m_exp);
         if (ret < 0) {
             fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
             exit(EXIT_FAILURE);
@@ -260,6 +285,7 @@ int main(int argc, char* argv[]) {
         simple_tone_gen_destroy(&tone_gen);
     }
 
+    free(message);
     cpu_spinner_destroy(&spinner);
     return 0;
 }

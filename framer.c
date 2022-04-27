@@ -9,7 +9,6 @@
 #include "utils.h"
 
 #define FRAME_SFD 0x3c
-#define FRAME_MAX_PAYLOAD_SIZE 128
 
 #define BUF_SIZE 256
 
@@ -69,6 +68,7 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, i
     size_t len = in_len + 2 + sizeof(header_encoded) + payload_parity_len;
 
     if (in_len > FRAME_MAX_PAYLOAD_SIZE) return -EMSGSIZE;
+    if (framer->format == FRAMER_FORMAT_STANDARD && in_len + payload_parity_len > 255) return -EMSGSIZE;
     if (bitstream_remaining_cap(s) < len) return -E2BIG;
 
 
