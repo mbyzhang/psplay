@@ -90,17 +90,19 @@ void ftimer_run(ftimer_t *ftimer)
         timespec_step(&ftimer->last_tick, ftimer->interval);
         struct timespec now;
         clock_gettime(CLOCK_SOURCE, &now);
-        timespec_diff(&now, ftimer->last_tick);
+        struct timespec diff = now;
+        timespec_diff(&diff, ftimer->last_tick);
 
         if (!(ftimer->flags & FTIMER_COMPENSATE_MISSES))
         {
             while (timespec_cmp(now, (struct timespec){0, 0}) <= 0) {
                 timespec_step(&ftimer->last_tick, ftimer->interval);
-                timespec_diff(&now, ftimer->last_tick);
+                diff = now;
+                timespec_diff(&diff, ftimer->last_tick);
             }
         }
 
-        nanosleep(&now, NULL);
+        nanosleep(&diff, NULL);
         if (ftimer->cb != NULL) ftimer->cb(ftimer->cb_args);
         CHECK_ERROR_NE0(sem_post(&ftimer->sem));
 #endif
