@@ -247,28 +247,32 @@ int main(int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
         bitstream_dump(&bitstream);
-        do {
+        while (true) {
+            bitstream_seek(&bitstream, 0);
             if (use_dbpsk) {
                 dbpsk_send_sequence(&dbpsk, &bitstream);
             }
             else {
                 fsk_send_sequence(&fsk, &bitstream);
             }
+            if (!loop) break;
             usleep(1000000UL * loop_delay);
-        } while (loop);
+        }
         bitstream_destroy(&bitstream);
         framer_destory(&framer);
         break;
     case MODE_CHIRP:
-        do {
+        while (true) {
             play_chirp(&tone_gen, 1000.0, 20000.0, 10.0, (struct timespec){0, 20000000L});
-        } while (loop);
+            if (!loop) break;
+            usleep(1000000UL * loop_delay);
+        }
         break;
     case MODE_AUDIOFILE:
         ppbuf_init(&ppbuf, block_size * sizeof(double));
         bitbang_player_init(&bbplayer, &spinner, sndfile_info.samplerate, audio_gain);
 
-        do {
+        while (true) {
             sf_seek(sndfile, 0, SF_SEEK_SET);
             bitbang_player_play(&bbplayer, &ppbuf);
 
@@ -277,8 +281,9 @@ int main(int argc, char* argv[]) {
             }
 
             bitbang_player_stop(&bbplayer);
+            if (!loop) break;
             usleep(1000000UL * loop_delay);
-        } while (loop);
+        }
 
         ppbuf_destroy(&ppbuf);
         bitbang_player_destroy(&bbplayer);
