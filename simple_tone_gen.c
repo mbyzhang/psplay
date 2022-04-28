@@ -8,6 +8,7 @@
 
 int simple_tone_gen_init(simple_tone_gen_t* simple_tone_gen, cpu_spinner_t* spinner) {
     simple_tone_gen->spinner = spinner;
+    thread_set_priority_to_max();
     return 0;
 }
 
