@@ -3,9 +3,8 @@
 
 #include "ping_pong_buf.h"
 #include "cpu_spinner.h"
-#include <event2/event.h>
+#include "ftimer.h"
 #include <time.h>
-#include <pthread.h>
 #include <stdint.h>
 #include <sys/types.h>
 
@@ -16,8 +15,7 @@
 
 typedef struct {
     cpu_spinner_t* spinner;
-    struct timeval sampling_interval;
-    pthread_t worker_thread;
+    struct timespec sampling_interval;
     ppbuf_t* ppbuf;
     int state;
     pthread_mutex_t state_mutex;
@@ -25,6 +23,7 @@ typedef struct {
     size_t pos;
     size_t size;
     double gain;
+    ftimer_t timer;
 } bitbang_player_t;
 
 int bitbang_player_init(bitbang_player_t* bbp, cpu_spinner_t* spinner, double fs, double gain);

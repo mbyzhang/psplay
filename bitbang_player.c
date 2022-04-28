@@ -1,5 +1,6 @@
 #include "bitbang_player.h"
 #include "utils.h"
+#include "ftimer.h"
 #include <limits.h>
 #include <math.h>
 #include <errno.h>
@@ -7,7 +8,7 @@
 
 int bitbang_player_init(bitbang_player_t* bbp, cpu_spinner_t* spinner, double fs, double gain) {
     bbp->spinner = spinner;
-    bbp->sampling_interval = us_to_timeval(1e6 / fs);
+    bbp->sampling_interval = hz_to_period_timespec(fs);
     bbp->state = BITBANG_PLAYER_STATE_STOPPED;
     bbp->gain = gain;
     pthread_mutex_init(&bbp->state_mutex, NULL);
@@ -18,13 +19,11 @@ int bitbang_player_init(bitbang_player_t* bbp, cpu_spinner_t* spinner, double fs
 
 typedef struct {
     bitbang_player_t* bbp;
-    struct event_base* event_base;
-    struct event** tick_ev;
+    ftimer_t timer;
 } tick_cb_args_t;
 
-static void tick_cb_func(evutil_socket_t fd, short what, void *args_raw) {
-    tick_cb_args_t* args = (tick_cb_args_t*)args_raw;
-    bitbang_player_t* bbp = args->bbp;
+static void tick_cb_func(void *args_raw) {
+    bitbang_player_t* bbp = (bitbang_player_t*)args_raw;
 
     if (bbp->size == bbp->pos) {
         if (bbp->buf != NULL) {
@@ -50,7 +49,7 @@ static void tick_cb_func(evutil_socket_t fd, short what, void *args_raw) {
                 bbp->state = BITBANG_PLAYER_STATE_STOPPED;
                 fprintf(stderr, "bitbang_player: playback state STOPPING -> STOPPED\n");
                 cpu_spinner_spin(bbp->spinner, CPU_SPINNER_ALL_CORES_IDLE);
-                event_del(*args->tick_ev);
+                ftimer_exit(&bbp->timer);
                 break;
             case BITBANG_PLAYER_STATE_PLAYING:
                 // PLAYING -> STALLED
@@ -76,47 +75,15 @@ static void tick_cb_func(evutil_socket_t fd, short what, void *args_raw) {
     }
 }
 
-static void* worker(void* args_raw) {
-    bitbang_player_t* bbp = (bitbang_player_t*)args_raw;
-
-    const int policy = SCHED_RR;
-    struct sched_param param = {
-        .sched_priority = sched_get_priority_max(policy)
-    };
-    pthread_setschedparam(pthread_self(), policy, &param);
-
-    struct event_base* event_base = event_base_new();
-    struct event* tick_ev;
-    tick_cb_args_t tick_args = {
-        .bbp = bbp,
-        .event_base = event_base,
-        .tick_ev = &tick_ev,
-    };
-
-    tick_ev = event_new(event_base, -1, EV_PERSIST, tick_cb_func, &tick_args);
-    int ret = event_add(tick_ev, &bbp->sampling_interval);
-    if (ret < 0) {
-        perror("bitbang_player: failed to create event");
-    }
-    event_base_dispatch(event_base);
-    event_base_free(event_base);
-
-    return NULL;
-}
-
 int bitbang_player_play(bitbang_player_t* bbp, ppbuf_t* ppbuf) {
     bbp->ppbuf = ppbuf;
     bbp->state = BITBANG_PLAYER_STATE_STALLED;
     bbp->size = ppbuf->size / sizeof(double);
     bbp->pos = bbp->size;
 
-    if (pthread_create(&bbp->worker_thread, NULL, worker, bbp)) {
-        goto pthread_create_fail;
-    }
+    ftimer_create(&bbp->timer, FTIMER_RUN_ASYNC | FTIMER_RUN_RT, bbp->sampling_interval, tick_cb_func, bbp);
 
     return 0;
-pthread_create_fail:
-    return 1;
 }
 
 void bitbang_player_stop(bitbang_player_t* bbp) {
@@ -133,8 +100,7 @@ void bitbang_player_stop(bitbang_player_t* bbp) {
     pthread_mutex_lock(&bbp->state_mutex);
     bbp->state = BITBANG_PLAYER_STATE_STOPPING;
     pthread_mutex_unlock(&bbp->state_mutex);
-
-    pthread_join(bbp->worker_thread, NULL);
+    ftimer_destroy(&bbp->timer);
 }
 
 void bitbang_player_destroy(bitbang_player_t* bbp) {
