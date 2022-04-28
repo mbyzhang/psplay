@@ -33,6 +33,15 @@
     }                              \
 } while (0);
 
+#define PARSE_CLI_LONG(var) do {       \
+    char *endptr;                      \
+    var = strtol(optarg, &endptr, 10); \
+    if (optarg == endptr) {            \
+        fprintf(stderr, "Could not parse command-line argument -%c=%s\n", opt, optarg); \
+        exit(EXIT_FAILURE);            \
+    }                                  \
+} while (0);
+
 void modulator_cb(int status, cpu_spinner_t* spinner) {
     cpu_spinner_spin(spinner, (status)? CPU_SPINNER_ALL_CORES_ACTIVE : CPU_SPINNER_ALL_CORES_IDLE);
 }
@@ -60,6 +69,7 @@ int main(int argc, char* argv[]) {
     bool loop = false;
     bool use_dbpsk = false;
     double loop_delay = 0.5;
+    int n_iters = -1;
 
     double baudrate = 100.0;
 
@@ -71,7 +81,7 @@ int main(int argc, char* argv[]) {
     double audio_gain = 1.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, "slacrpm:b:d:i:g:f:")) != -1) {
+    while ((opt = getopt(argc, argv, "slacrpm:b:d:i:g:f:n:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -154,8 +164,11 @@ int main(int argc, char* argv[]) {
         case 'r': // raw-payload frame
             framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
             break;
+        case 'n': // number of iterations of sending alternating symbols
+            PARSE_CLI_LONG(n_iters);
+            break;
         default:
-            fprintf(stderr, "usage: %s [-saclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-saclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain] [-n n_iters]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
@@ -205,7 +218,7 @@ int main(int argc, char* argv[]) {
     case MODE_ALTERNATING_SYMBOLS:
         if (use_dbpsk) {
             dbpsk_start(&dbpsk);
-            while (true) {
+            while (n_iters == -1 || n_iters-- > 0) {
                 dbpsk_send_symbol(&dbpsk, 0);
                 dbpsk_send_symbol(&dbpsk, 1);
             }
@@ -213,7 +226,7 @@ int main(int argc, char* argv[]) {
         }
         else {
             fsk_start(&fsk);
-            while (true) {
+            while (n_iters == -1 || n_iters-- > 0) {
                 for (size_t i = 0; i < n_freqs; i++) {
                     fsk_send_symbol(&fsk, i);
                 }
