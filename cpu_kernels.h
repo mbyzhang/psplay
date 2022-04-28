@@ -31,7 +31,7 @@ static inline void kernel_avx2_naive() {
     }
 }
 
-#define CPU_KERNEL_AVX2_ARR_SIZE 1024
+#define CPU_KERNEL_AVX2_ARR_SIZE 128
 
 static inline int kernel_avx2_setup(void** args) {
     *args = calloc(CPU_KERNEL_AVX2_ARR_SIZE, sizeof(__m256d));
