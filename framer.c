@@ -74,7 +74,7 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, i
 
     // premable
     for (int i = 0; i < FRAME_PREAMBLE_N; i++) {
-        CHECK_ERROR_LT0(bitstream_write_n(s, 1, m_exp * 2));
+        CHECK_ERROR_LT0(bitstream_write_n(s, 1 << m_exp, m_exp * 2));
     }
 
     // start-of-frame delimiter
