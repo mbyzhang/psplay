@@ -66,10 +66,9 @@ int main(int argc, char* argv[]) {
     CHECK_ERROR_PTR(message);
     size_t message_len = 0;
 
-    bool loop = false;
     bool use_dbpsk = false;
     double loop_delay = 0.5;
-    int n_iters = -1;
+    int loop_count = 0;
 
     double baudrate = 100.0;
 
@@ -81,7 +80,7 @@ int main(int argc, char* argv[]) {
     double audio_gain = 1.0;
 
     int opt;
-    while ((opt = getopt(argc, argv, "slacrpm:b:d:i:g:f:n:")) != -1) {
+    while ((opt = getopt(argc, argv, "sacrpm:b:d:i:g:f:n:")) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -125,9 +124,6 @@ int main(int argc, char* argv[]) {
             }
  
             break;
-        case 'l': // loop
-            loop = true;
-            break;
         case 'a': // alternating symbols
             mode = MODE_ALTERNATING_SYMBOLS;
             break;
@@ -164,14 +160,19 @@ int main(int argc, char* argv[]) {
         case 'r': // raw-payload frame
             framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
             break;
-        case 'n': // number of iterations of sending alternating symbols
-            PARSE_CLI_LONG(n_iters);
+        case 'n': // loop count
+            PARSE_CLI_LONG(loop_count);
             break;
         default:
-            fprintf(stderr, "usage: %s [-saclrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain] [-n n_iters]\n", argv[0]);
+            fprintf(stderr, "usage: %s [-sacrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain] [-n loop_count]\n", argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
+    }
+
+    if (loop_count == 0) {
+        if (mode == MODE_ALTERNATING_SYMBOLS) loop_count = -1;
+        else loop_count = 1;
     }
 
     if (n_freqs == 0) {
@@ -218,7 +219,7 @@ int main(int argc, char* argv[]) {
     case MODE_ALTERNATING_SYMBOLS:
         if (use_dbpsk) {
             dbpsk_start(&dbpsk);
-            while (n_iters == -1 || n_iters-- > 0) {
+            while (loop_count == -1 || loop_count-- > 0) {
                 dbpsk_send_symbol(&dbpsk, 0);
                 dbpsk_send_symbol(&dbpsk, 1);
             }
@@ -226,7 +227,7 @@ int main(int argc, char* argv[]) {
         }
         else {
             fsk_start(&fsk);
-            while (n_iters == -1 || n_iters-- > 0) {
+            while (loop_count == -1 || loop_count-- > 0) {
                 for (size_t i = 0; i < n_freqs; i++) {
                     fsk_send_symbol(&fsk, i);
                 }
@@ -255,7 +256,7 @@ int main(int argc, char* argv[]) {
             else {
                 fsk_send_sequence(&fsk, &bitstream);
             }
-            if (!loop) break;
+            if (loop_count != -1 && --loop_count <= 0) break;
             usleep(1000000UL * loop_delay);
         }
         bitstream_destroy(&bitstream);
@@ -264,7 +265,7 @@ int main(int argc, char* argv[]) {
     case MODE_CHIRP:
         while (true) {
             play_chirp(&tone_gen, 1000.0, 20000.0, 10.0, (struct timespec){0, 20000000L});
-            if (!loop) break;
+            if (loop_count != -1 && --loop_count <= 0) break;
             usleep(1000000UL * loop_delay);
         }
         break;
@@ -281,7 +282,7 @@ int main(int argc, char* argv[]) {
             }
 
             bitbang_player_stop(&bbplayer);
-            if (!loop) break;
+            if (loop_count != -1 && --loop_count <= 0) break;
             usleep(1000000UL * loop_delay);
         }
 
