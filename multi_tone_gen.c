@@ -49,7 +49,9 @@ void multi_tone_gen_switch_frequency(multi_tone_gen_t* tone_gen, int freq_idx) {
 }
 
 void multi_tone_gen_switch_phase(multi_tone_gen_t* tone_gen) {
-    toggle(tone_gen);
+    pthread_mutex_lock(&tone_gen->status_mutex);
+    tone_gen->status = !tone_gen->status;
+    pthread_mutex_unlock(&tone_gen->status_mutex);
 }
 
 void multi_tone_gen_destroy(multi_tone_gen_t* tone_gen) {
