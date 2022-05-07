@@ -62,6 +62,8 @@ int main(int argc, char* argv[]) {
     int ret;
     bitstream_t bitstream;
     framer_format_t framer_format = FRAMER_FORMAT_STANDARD;
+    double frame_ecc_level = 0.2;
+    int frame_preamble_len = 5;
     uint8_t* message = malloc(FRAME_MAX_PAYLOAD_SIZE);
     CHECK_ERROR_PTR(message);
     size_t message_len = 0;
@@ -93,9 +95,11 @@ int main(int argc, char* argv[]) {
         { "mode-chirp",         no_argument,        NULL, 'c' },
         { "mode-alternating",   no_argument,        NULL, 'a' },
         { "frame-payload-raw",  no_argument,        NULL, 'r' },
+        { "frame-ecc-level",    required_argument,  NULL, 'e' },
+        { "frame-preamble-len", required_argument,  NULL, 'q' },
         { NULL,                 0,                  NULL, 0   }
     };
-    const char* short_options = "hm:sf:i:g:b:d:n:pcar";
+    const char* short_options = "hm:sf:i:g:b:d:n:pcare:q:";
     int opt;
 
     while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
@@ -181,6 +185,12 @@ int main(int argc, char* argv[]) {
         case 'n': // loop count
             PARSE_CLI_LONG(loop_count);
             break;
+        case 'e': // ECC level
+            PARSE_CLI_DOUBLE(frame_ecc_level);
+            break;
+        case 'q': // frame preamble length
+            PARSE_CLI_LONG(frame_preamble_len);
+            break;
         case 'h': // help
         default:
             fprintf(stderr,
@@ -193,15 +203,17 @@ int main(int argc, char* argv[]) {
                 "  -m --message     <message>           message to transmit\n"
                 "  -s --stdin                           read message from stdin\n"
                 "  -f --freqs       <f1>[,<f2>[,...]]   carrier frequencies\n"
-                "  -i --audio-input <file>              play WAV audio from <file>\n"
+                "  -i --audio-input <file>              play audio from <file>\n"
                 "  -g --audio-gain  <value>             audio playback gain [default=1.0]\n"
                 "  -b --baud-rate   <value>             baud rate [default=100.0]\n"
                 "  -d --loop-delay  <value>             loop delay in seconds [default=0.5]\n"
                 "  -n --loop-count  <n>                 loop count [default=1]\n"
                 "  -p --dbpsk                           use DBPSK modulation instead of FSK\n"
-                "  -c --mode-chirp                      play chirp test sound\n"
+                "  -c --mode-chirp                      play chirp test sound pattern\n"
                 "  -a --mode-alternating                transmit alternating symbols [default]\n"
                 "  -r --frame-payload-raw               send payload in raw (without line coding and ECC)\n"
+                "  -e --frame-ecc-level      <value>    level of payload redundancy [default=0.2]\n"
+                "  -q --frame-preamble-len   <n>        length of frame preamble [default=5]"
                 "\n",
                 argv[0]);
             exit(EXIT_FAILURE);
@@ -275,13 +287,13 @@ int main(int argc, char* argv[]) {
         }
         break;
     case MODE_MESSAGE:
-        framer_init(&framer, 0.2, framer_format);
+        framer_init(&framer, frame_ecc_level, framer_format, frame_preamble_len, m_exp);
         ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
         if (ret < 0) {
             fprintf(stderr, "Could not allocate memory for bitstream\n");
             exit(EXIT_FAILURE);
         }
-        ret = framer_frame(&framer, message, message_len, &bitstream, m_exp);
+        ret = framer_frame(&framer, message, message_len, &bitstream);
         if (ret < 0) {
             fprintf(stderr, "Could not encode message: %s\n", strerror(-ret));
             exit(EXIT_FAILURE);

@@ -18,10 +18,12 @@ typedef struct {
     correct_reed_solomon* rs_header;
     double payload_parity_len_ratio;
     framer_format_t format;
+    size_t preamble_length;
+    int m_exp;
 } framer_t;
 
-int framer_init(framer_t* framer, double payload_parity_ratio, framer_format_t format);
-int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, int n_ary);
+int framer_init(framer_t* framer, double payload_parity_ratio, framer_format_t format, size_t preamble_length, int m_exp);
+int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s);
 void framer_destory(framer_t* framer);
 
 #endif

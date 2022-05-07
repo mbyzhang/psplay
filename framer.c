@@ -12,7 +12,6 @@
 
 #define BUF_SIZE 256
 
-#define FRAME_PREAMBLE_N 5
 #define FRAME_HEADER_RS_PARITY_LEN 2
 
 #define FRAMER_RS_PRIM correct_rs_primitive_polynomial_8_4_3_2_0
@@ -48,15 +47,17 @@ static inline ssize_t bitstream_write_8b10b_chunk(bitstream_t* s, uint8_t* data,
     return bits_written;
 }
 
-int framer_init(framer_t* framer, double payload_parity_len_ratio, framer_format_t format) {
+int framer_init(framer_t* framer, double payload_parity_len_ratio, framer_format_t format, size_t preamble_length, int m_exp) {
     framer->payload_parity_len_ratio = payload_parity_len_ratio;
     framer->rs_header = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, FRAME_HEADER_RS_PARITY_LEN);
     framer->format = format;
+    framer->preamble_length = preamble_length;
+    framer->m_exp = m_exp;
     if (framer->rs_header == NULL) return -1;
     return 0;
 }
 
-int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, int m_exp) {
+int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
     int ret = 0;
     int rd = -1;
 
@@ -65,16 +66,24 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s, i
     uint8_t payload_encoded[BUF_SIZE];
 
     size_t payload_parity_len = ceil(framer->payload_parity_len_ratio * in_len);
-    size_t len = in_len + 2 + sizeof(header_encoded) + payload_parity_len;
+    size_t len = framer->preamble_length * (framer->m_exp * 2) + sizeof(header_encoded) * 10;
+
+    switch (framer->format) {
+    case FRAMER_FORMAT_STANDARD:
+        len += (in_len + payload_parity_len) * 10;
+        break;
+    case FRAMER_FORMAT_RAW_PAYLOAD:
+        len += in_len * 8;
+        break;
+    }
 
     if (in_len > FRAME_MAX_PAYLOAD_SIZE) return -EMSGSIZE;
     if (framer->format == FRAMER_FORMAT_STANDARD && in_len + payload_parity_len > 255) return -EMSGSIZE;
     if (bitstream_remaining_cap(s) < len) return -E2BIG;
 
-
-    // premable
-    for (int i = 0; i < FRAME_PREAMBLE_N; i++) {
-        CHECK_ERROR_LT0(bitstream_write_n(s, 1 << m_exp, m_exp * 2));
+    // preamble
+    for (int i = 0; i < framer->preamble_length; i++) {
+        CHECK_ERROR_LT0(bitstream_write_n(s, 1 << framer->m_exp, framer->m_exp * 2));
     }
 
     // start-of-frame delimiter
