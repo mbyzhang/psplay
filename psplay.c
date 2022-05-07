@@ -238,7 +238,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    int m_exp = log2_int(n_freqs);
+    int m_exp = 0;
 
 #ifdef __linux__
     linux_cpufreq_governor_set_to_performance();
@@ -252,6 +252,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "DBPSK only supports one carrier frequency\n");
                 exit(EXIT_FAILURE);
             }
+            m_exp = 1;
             dbpsk_init(&dbpsk, freqs[0], hz_to_period_timespec(baudrate), (void(*)(int, void*))modulator_cb, &spinner);
         }
         else {
@@ -259,6 +260,7 @@ int main(int argc, char* argv[]) {
                 fprintf(stderr, "Number of frequencies must be at least two and a power of two\n");
                 exit(EXIT_FAILURE);
             }
+            m_exp = log2_int(n_freqs);
             fsk_init(&fsk, freqs, m_exp, hz_to_period_timespec(baudrate), (void(*)(int, void*))modulator_cb, &spinner);
         }
     }
