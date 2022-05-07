@@ -61,7 +61,7 @@ int main(int argc, char* argv[]) {
     int mode = MODE_ALTERNATING_SYMBOLS;
     int ret;
     bitstream_t bitstream;
-    framer_format_t framer_format = FRAMER_FORMAT_STANDARD;
+    int frame_flags = 0;
     double frame_ecc_level = 0.2;
     int frame_preamble_len = 5;
     uint8_t* message = malloc(FRAME_MAX_PAYLOAD_SIZE);
@@ -94,12 +94,13 @@ int main(int argc, char* argv[]) {
         { "dbpsk",              no_argument,        NULL, 'p' },
         { "mode-chirp",         no_argument,        NULL, 'c' },
         { "mode-alternating",   no_argument,        NULL, 'a' },
+        { "frame-no-header",    no_argument,        NULL, 'x' },
         { "frame-payload-raw",  no_argument,        NULL, 'r' },
         { "frame-ecc-level",    required_argument,  NULL, 'e' },
         { "frame-preamble-len", required_argument,  NULL, 'q' },
         { NULL,                 0,                  NULL, 0   }
     };
-    const char* short_options = "hm:sf:i:g:b:d:n:pcare:q:";
+    const char* short_options = "hm:sf:i:g:b:d:n:pcaxre:q:";
     int opt;
 
     while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
@@ -179,8 +180,11 @@ int main(int argc, char* argv[]) {
         case 'c': // chrip
             mode = MODE_CHIRP;
             break;
+        case 'x':
+            frame_flags |= FRAME_FLAG_NO_HEADER;
+            break;
         case 'r': // raw-payload frame
-            framer_format = FRAMER_FORMAT_RAW_PAYLOAD;
+            frame_flags |= FRAME_FLAG_NO_PAYLOAD_LINE_CODING;
             break;
         case 'n': // loop count
             PARSE_CLI_LONG(loop_count);
@@ -211,7 +215,8 @@ int main(int argc, char* argv[]) {
                 "  -p --dbpsk                           use DBPSK modulation instead of FSK\n"
                 "  -c --mode-chirp                      play chirp test sound pattern\n"
                 "  -a --mode-alternating                transmit alternating symbols [default]\n"
-                "  -r --frame-payload-raw               send payload in raw (without line coding and ECC)\n"
+                "  -x --frame-no-header                 do not include a header in the frame\n"
+                "  -r --frame-payload-raw               send payload in raw (without line coding)\n"
                 "  -e --frame-ecc-level      <value>    level of payload redundancy [default=0.2]\n"
                 "  -q --frame-preamble-len   <n>        length of frame preamble [default=5]"
                 "\n",
@@ -289,7 +294,7 @@ int main(int argc, char* argv[]) {
         }
         break;
     case MODE_MESSAGE:
-        framer_init(&framer, frame_ecc_level, framer_format, frame_preamble_len, m_exp);
+        framer_init(&framer, frame_ecc_level, frame_flags, frame_preamble_len, m_exp);
         ret = bitstream_init(&bitstream, FRAME_MAX_LENGTH_BITS);
         if (ret < 0) {
             fprintf(stderr, "Could not allocate memory for bitstream\n");

@@ -47,10 +47,10 @@ static inline ssize_t bitstream_write_8b10b_chunk(bitstream_t* s, uint8_t* data,
     return bits_written;
 }
 
-int framer_init(framer_t* framer, double payload_parity_len_ratio, framer_format_t format, size_t preamble_length, int m_exp) {
+int framer_init(framer_t* framer, double payload_parity_len_ratio, int flags, size_t preamble_length, int m_exp) {
     framer->payload_parity_len_ratio = payload_parity_len_ratio;
     framer->rs_header = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, FRAME_HEADER_RS_PARITY_LEN);
-    framer->format = format;
+    framer->flags = flags;
     framer->preamble_length = preamble_length;
     framer->m_exp = m_exp;
     if (framer->rs_header == NULL) return -1;
@@ -66,19 +66,21 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
     uint8_t payload_encoded[BUF_SIZE];
 
     size_t payload_parity_len = ceil(framer->payload_parity_len_ratio * in_len);
-    size_t len = framer->preamble_length * (framer->m_exp * 2) + sizeof(header_encoded) * 10;
+    size_t len = framer->preamble_length * (framer->m_exp * 2);
 
-    switch (framer->format) {
-    case FRAMER_FORMAT_STANDARD:
+    if (!(framer->flags & FRAME_FLAG_NO_HEADER)) {
+        len += sizeof(header_encoded) * 10;
+    }
+
+    if (framer->flags & FRAME_FLAG_NO_PAYLOAD_LINE_CODING) {
+        len += (in_len + payload_parity_len) * 8;
+    }
+    else {
         len += (in_len + payload_parity_len) * 10;
-        break;
-    case FRAMER_FORMAT_RAW_PAYLOAD:
-        len += in_len * 8;
-        break;
     }
 
     if (in_len > FRAME_MAX_PAYLOAD_SIZE) return -EMSGSIZE;
-    if (framer->format == FRAMER_FORMAT_STANDARD && in_len + payload_parity_len > 255) return -EMSGSIZE;
+    if (in_len + payload_parity_len > 255) return -EMSGSIZE;
     if (bitstream_remaining_cap(s) < len) return -E2BIG;
 
     // preamble
@@ -86,24 +88,24 @@ int framer_frame(framer_t* framer, uint8_t* in, size_t in_len, bitstream_t* s) {
         CHECK_ERROR_LT0(bitstream_write_n(s, 1 << framer->m_exp, framer->m_exp * 2));
     }
 
-    // start-of-frame delimiter
-    CHECK_ERROR_LT0(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
+    if (!(framer->flags & FRAME_FLAG_NO_HEADER)) {
+        // start frame delimiter
+        CHECK_ERROR_LT0(bitstream_write_8b10b(s, FRAME_SFD, &rd, true));
 
-    // header
-    CHECK_ERROR_LT0(correct_reed_solomon_encode(framer->rs_header, header, sizeof(header), header_encoded));
-    CHECK_ERROR_LT0(bitstream_write_8b10b_chunk(s, header_encoded, sizeof(header_encoded), &rd));
+        // length
+        CHECK_ERROR_LT0(correct_reed_solomon_encode(framer->rs_header, header, sizeof(header), header_encoded));
+        CHECK_ERROR_LT0(bitstream_write_8b10b_chunk(s, header_encoded, sizeof(header_encoded), &rd));
+    }
     
     // payload
     correct_reed_solomon* rs_payload = correct_reed_solomon_create(FRAMER_RS_PRIM, FRAMER_RS_FCR, FRAMER_RS_GRG, payload_parity_len);
+    CHECK_ERROR_LT0(correct_reed_solomon_encode(rs_payload, in, in_len, payload_encoded));
 
-    switch (framer->format) {
-    case FRAMER_FORMAT_STANDARD:
-        CHECK_ERROR_LT0(correct_reed_solomon_encode(rs_payload, in, in_len, payload_encoded));
+    if (framer->flags & FRAME_FLAG_NO_PAYLOAD_LINE_CODING) {
+        CHECK_ERROR_LT0(bitstream_write(s, payload_encoded, (in_len + payload_parity_len) * 8));
+    }
+    else {
         CHECK_ERROR_LT0(bitstream_write_8b10b_chunk(s, payload_encoded, in_len + payload_parity_len, &rd));
-        break;
-    case FRAMER_FORMAT_RAW_PAYLOAD:
-        CHECK_ERROR_LT0(bitstream_write(s, in, in_len * 8));
-        break;
     }
 
     ret = len;
