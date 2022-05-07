@@ -19,7 +19,7 @@ void dbpsk_start(dbpsk_t* dbpsk) {
 }
 
 void dbpsk_send_symbol(dbpsk_t* dbpsk, unsigned int symbol) {
-    if (symbol != dbpsk->last_symbol) {
+    if (symbol == 1) {
         multi_tone_gen_switch_phase(&dbpsk->tone_gen);
     }
 
