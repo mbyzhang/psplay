@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdbool.h>
-
+#include <getopt.h>
 #include <sndfile.h>
 
 #include "cpu_spinner.h"
@@ -79,8 +79,26 @@ int main(int argc, char* argv[]) {
     const int block_size = 4096;
     double audio_gain = 1.0;
 
+    static struct option long_options[] = {
+        { "help",               no_argument,        NULL, 'h' },
+        { "message",            required_argument,  NULL, 'm' },
+        { "stdin",              no_argument,        NULL, 's' },
+        { "freqs",              required_argument,  NULL, 'f' },
+        { "audio-input",        required_argument,  NULL, 'i' },
+        { "audio-gain",         required_argument,  NULL, 'g' },
+        { "baud-rate",          required_argument,  NULL, 'b' },
+        { "loop-delay",         required_argument,  NULL, 'd' },
+        { "loop-count",         required_argument,  NULL, 'n' },
+        { "dbpsk",              no_argument,        NULL, 'p' },
+        { "mode-chirp",         no_argument,        NULL, 'c' },
+        { "mode-alternating",   no_argument,        NULL, 'a' },
+        { "frame-payload-raw",  no_argument,        NULL, 'r' },
+        { NULL,                 0,                  NULL, 0   }
+    };
+    const char* short_options = "hm:sf:i:g:b:d:n:pcar";
     int opt;
-    while ((opt = getopt(argc, argv, "sacrpm:b:d:i:g:f:n:")) != -1) {
+
+    while ((opt = getopt_long(argc, argv, short_options, long_options, NULL)) != -1) {
         switch (opt) {
         case 'f': { // frequencies
             char* pch;
@@ -163,8 +181,29 @@ int main(int argc, char* argv[]) {
         case 'n': // loop count
             PARSE_CLI_LONG(loop_count);
             break;
+        case 'h': // help
         default:
-            fprintf(stderr, "usage: %s [-sacrp] [-m message] [-i audio_file] [-f f0,f1,...] [-b baudrate] [-d loop_delay] [-i audio_gain] [-n loop_count]\n", argv[0]);
+            fprintf(stderr,
+                "OVERVIEW: Transmit message over sound or play audio using processor VRMs\n"
+                "USAGE: %s [options]\n"
+                "\n"
+                "OPTIONS:\n"
+                "\n"
+                "  -h --help                            show this message\n"
+                "  -m --message     <message>           message to transmit\n"
+                "  -s --stdin                           read message from stdin\n"
+                "  -f --freqs       <f1>[,<f2>[,...]]   carrier frequencies\n"
+                "  -i --audio-input <file>              play WAV audio from <file>\n"
+                "  -g --audio-gain  <value>             audio playback gain [default=1.0]\n"
+                "  -b --baud-rate   <value>             baud rate [default=100.0]\n"
+                "  -d --loop-delay  <value>             loop delay in seconds [default=0.5]\n"
+                "  -n --loop-count  <n>                 loop count [default=1]\n"
+                "  -p --dbpsk                           use DBPSK modulation instead of FSK\n"
+                "  -c --mode-chirp                      play chirp test sound\n"
+                "  -a --mode-alternating                transmit alternating symbols [default]\n"
+                "  -r --frame-payload-raw               send payload in raw (without line coding and ECC)\n"
+                "\n",
+                argv[0]);
             exit(EXIT_FAILURE);
             break;
         }
