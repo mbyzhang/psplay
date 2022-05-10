@@ -273,6 +273,8 @@ int main(int argc, char* argv[]) {
         simple_tone_gen_init(&tone_gen, &spinner);
     }
 
+    thread_set_priority_to_max();
+
     switch (mode) {
     case MODE_ALTERNATING_SYMBOLS:
         if (use_dbpsk) {
