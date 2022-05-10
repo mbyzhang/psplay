@@ -4,7 +4,7 @@
 
 ### Debian/Ubuntu
 ```
-$ sudo apt install libevent-dev pkg-config cmake build-essential libgtest-dev libsndfile1-dev
+$ sudo apt install pkg-config cmake build-essential libgtest-dev libsndfile1-dev
 ```
 
 ### macOS
@@ -12,7 +12,7 @@ $ sudo apt install libevent-dev pkg-config cmake build-essential libgtest-dev li
 Make sure you have Homebrew and Xcode Command Line Tools installed.
 
 ```
-$ brew install libevent pkg-config cmake googletest sndfile
+$ brew install pkg-config cmake googletest sndfile
 ```
 
 ### Any platform

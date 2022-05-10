@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include <stdio.h>
 
 #define MEGA 1000000L
 #define GIGA 1000000000L

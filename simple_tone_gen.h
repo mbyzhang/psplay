@@ -2,7 +2,6 @@
 #define __SIMPLE_TONE_GEN_H__
 
 #include <sys/time.h>
-#include <event2/event.h>
 
 #include "cpu_spinner.h"
 

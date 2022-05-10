@@ -21,7 +21,7 @@ jobs:
     - uses: actions/checkout@v2
 
     - name: Install deps
-      run: sudo apt install libevent-dev pkg-config cmake build-essential libgtest-dev libsndfile1-dev
+      run: sudo apt install pkg-config cmake build-essential libgtest-dev libsndfile1-dev
 
     - name: Install libcorrect
       run: |
