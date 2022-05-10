@@ -13,7 +13,7 @@ void dbpsk_init(dbpsk_t* dbpsk, double carrier_freq, struct timespec symbol_dura
 }
 
 void dbpsk_start(dbpsk_t* dbpsk) {
-    multi_tone_gen_init(&dbpsk->tone_gen, &dbpsk->carrier_freq, 1, 0, dbpsk->cb, dbpsk->cb_args);
+    multi_tone_gen_init(&dbpsk->tone_gen, &dbpsk->carrier_freq, 1, FTIMER_COMPENSATE_MISSES, dbpsk->cb, dbpsk->cb_args);
     multi_tone_gen_switch_frequency(&dbpsk->tone_gen, 0);
     ftimer_create(&dbpsk->symbol_timer, FTIMER_RUN_RT | FTIMER_RUN_ASYNC | FTIMER_COMPENSATE_MISSES, dbpsk->symbol_duration, NULL, NULL);
 }
