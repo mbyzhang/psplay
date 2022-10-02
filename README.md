@@ -12,7 +12,7 @@ $ sudo apt install pkg-config cmake build-essential libgtest-dev libsndfile1-dev
 Make sure you have Homebrew and Xcode Command Line Tools installed.
 
 ```
-$ brew install pkg-config cmake googletest sndfile
+$ brew install pkg-config cmake googletest libsndfile
 ```
 
 ### Any platform
